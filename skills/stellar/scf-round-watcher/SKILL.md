@@ -9,14 +9,16 @@ description: Surface current and recent Stellar Community Fund (SCF) round activ
 
 Fetch `https://communityfund.stellar.org/awards`. The currently open round has status "Submission". Extract its rec ID from the round's link (`/awards/<rec-id>`).
 
-Try `__NEXT_DATA__` JSON extraction first — communityfund.stellar.org is a Next.js app with structured data embedded in a `<script id="__NEXT_DATA__">` block:
+The site is a client-rendered React app — plain `curl` returns mostly empty HTML. Use the **WebFetch tool** (Claude Code built-in) which handles client-rendered pages via its parsing layer:
 
-```bash
-curl -fsSL https://communityfund.stellar.org/awards \
-  | python3 -c "import sys, re, json; html=sys.stdin.read(); m=re.search(r'<script[^>]*id=\"__NEXT_DATA__\"[^>]*>(.*?)</script>', html, re.S); print(m.group(1)) if m else sys.exit(1)"
+```
+WebFetch(
+  url="https://communityfund.stellar.org/awards",
+  prompt="Find the round with status 'Submission' (currently open). Return its name (e.g., 'SCF #44'), its rec-id from the link (/awards/<rec-id>), the deadline date, and the maximum award amount."
+)
 ```
 
-If `__NEXT_DATA__` is present, parse JSON for structured access. Otherwise fall back to HTML scraping — look for round number (e.g., "SCF #44"), status ("Submission"), and deadline date.
+If WebFetch isn't available in the runtime, fall back to a headless-browser fetch (e.g., `playwright` or `puppeteer` via `uvx`) — `curl` alone won't get rendered content for this site.
 
 ### 2. Get the round's submissions
 
