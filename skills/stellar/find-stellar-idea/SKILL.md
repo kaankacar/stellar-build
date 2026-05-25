@@ -22,7 +22,6 @@ Read both Stellar-specific data and broader crypto market signals. The combinati
 - `~/.claude/skills/data/ideas/yc-requests-for-startups.json` — YC's published Request for Startups list (what YC explicitly wants funded)
 - `~/.claude/skills/data/ideas/yc-crypto-companies.json` — every YC-backed crypto company (competitive map + signal of what gets funded)
 - `~/.claude/skills/data/ideas/alliance-ideas.json` — Alliance DAO's startup ideas
-- `~/.claude/skills/data/ideas/rwa-defi-2026-ideas.json` — RWA + DeFi ideas relevant for 2026
 
 If any file is missing, proceed but note "(limited context — install fresh data with `--update`)".
 

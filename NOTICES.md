@@ -88,7 +88,6 @@ Curated reference documentation (subset of small-text folders) is included in `s
 - YC Requests for Startups — published list by Y Combinator
 - YC Crypto Companies — derived from Y Combinator's public company directory
 - Alliance DAO Ideas — published by Alliance DAO
-- RWA + DeFi 2026 Ideas — curated from various public sources
 
 These files are structured extracts from publicly available material; the underlying content remains the property of the respective authors. The JSON shapes used here originated in the solana.new bundle and are reused under the same fair-use framing for educational and research purposes within stellar-build's idea-discovery skill.
 
