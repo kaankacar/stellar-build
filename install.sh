@@ -376,6 +376,16 @@ else
   printf "  %s%sSetup complete!%s\n\n" "$GREEN" "$BOLD" "$RESET"
 fi
 
+# Git-repo hint for project-local installs.
+# /party-mode spawns each persona as an isolated subagent using git worktrees,
+# which need: (a) a git repo + (b) at least one commit (an empty commit works).
+# Only show this hint when installing to a non-HOME prefix that lacks a git repo.
+if [ "$PREFIX" != "$HOME" ] && [ ! -d "$PREFIX/.git" ]; then
+  printf "  %sTip:%s for multi-agent /party-mode to spawn isolated subagents,\n" "$YELLOW" "$RESET"
+  printf "  initialize this folder as a git repo with at least one commit:\n"
+  printf "    %scd %s && git init && git commit --allow-empty -m init%s\n\n" "$CYAN" "$PREFIX" "$RESET"
+fi
+
 # Uninstall hint — only show --prefix flag if user passed one (otherwise default $HOME)
 uninstall_suffix=""
 [ "$PREFIX" != "$HOME" ] && uninstall_suffix=" --prefix=$PREFIX"

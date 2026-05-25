@@ -40,8 +40,21 @@ Talk to any of them naturally:
 ```
 "talk to Tyler"             → adopts the architect persona
 "Justin, who are my competitors on Stellar?"  → analyst with context
-"party mode"                → all six in one group discussion
+"party mode"                → all six in one group discussion (see note below)
 ```
+
+### Multi-agent party mode requirement
+
+For `/party-mode` to spawn each persona as a real isolated subagent (rather than one LLM roleplaying everyone in solo mode), your project folder needs to be a git repo with at least one commit. Claude Code uses git worktrees for subagent isolation, which need a HEAD ref to branch from.
+
+If you see "not in a git repository" or "no HEAD" errors when running party mode, run:
+
+```bash
+git init
+git commit --allow-empty -m "init"
+```
+
+The empty commit is the trick. Once you have it, `/party-mode` spawns each persona in its own worktree and they think independently. Without the commit, party mode still runs but in solo mode (single LLM, six voices).
 
 ## Getting started
 
