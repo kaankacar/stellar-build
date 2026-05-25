@@ -115,6 +115,16 @@ for entry in "${PERSONAS[@]}"; do
   echo "  ✓ $orig → $new"
 done
 
+# --- Step 3b: Rename BMAD config path references _bmad/ → .stellar-build/ ---
+# Skills reference a project-local config dir for persona/agent customization.
+# Upstream BMAD calls it _bmad/; we rebrand so the leaked path doesn't show
+# BMAD plumbing in user-facing messages.
+echo ""
+echo "→ Renaming _bmad/ config paths to .stellar-build/"
+find "$DEST" -type f \( -name "SKILL.md" -o -name "customize.toml" -o -name "*.md" \) \
+  -exec perl -i -pe "s|_bmad/|.stellar-build/|g" {} \;
+echo "  ✓ All _bmad/ path references rewritten"
+
 # --- Step 4: Sanity verification ---
 echo ""
 echo "→ Verifying"
