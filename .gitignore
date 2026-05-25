@@ -1,0 +1,12 @@
+# Test installs
+test-install/
+fresh-test/
+smoke-test/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
