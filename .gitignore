@@ -3,6 +3,9 @@ test-install/
 fresh-test/
 smoke-test/
 
+# Source repos cloned for build (populated by tools/bootstrap-sources.sh)
+sources/
+
 # macOS
 .DS_Store
 

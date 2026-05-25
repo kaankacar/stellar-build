@@ -16,7 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-INPUT_DIR="${INPUT_DIR:-$REPO_ROOT/../solananew/sources/stellar-ecosystem-db/projects}"
+INPUT_DIR="${INPUT_DIR:-$REPO_ROOT/sources/stellar-ecosystem-db/projects}"
 OUT_DIR="$REPO_ROOT/skills/data/lumenloop"
 
 if [ ! -d "$INPUT_DIR" ]; then

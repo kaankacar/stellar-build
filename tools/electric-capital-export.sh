@@ -16,7 +16,7 @@ mkdir -p "$OUT_DIR"
 
 # open-dev-data needs a migrations directory. Point at our cloned source
 # (override with ODD_REPO env var if elsewhere).
-ODD_REPO="${ODD_REPO:-$REPO_ROOT/../solananew/sources/open-dev-data}"
+ODD_REPO="${ODD_REPO:-$REPO_ROOT/sources/open-dev-data}"
 MIGRATIONS_DIR="$ODD_REPO/migrations"
 
 if [ ! -d "$MIGRATIONS_DIR" ]; then

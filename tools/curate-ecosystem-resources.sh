@@ -10,7 +10,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-INPUT_DIR="${INPUT_DIR:-$REPO_ROOT/../solananew/sources/ecosystem-resources}"
+INPUT_DIR="${INPUT_DIR:-$REPO_ROOT/sources/ecosystem-resources}"
 OUT_DIR="$REPO_ROOT/skills/data/guides"
 
 if [ ! -d "$INPUT_DIR" ]; then
