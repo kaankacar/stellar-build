@@ -79,6 +79,21 @@ Curated reference documentation (subset of small-text folders) is included in `s
 
 ---
 
+## Broader market idea catalogs
+
+`skills/data/ideas/` and matching markdown in `skills/data/guides/` include curated JSON extracts of publicly published crypto/web3 thesis and idea reports from third parties:
+
+- a16z Big Ideas 2025 — original report by Andreessen Horowitz
+- a16z State of Crypto 2025 — original report by Andreessen Horowitz
+- YC Requests for Startups — published list by Y Combinator
+- YC Crypto Companies — derived from Y Combinator's public company directory
+- Alliance DAO Ideas — published by Alliance DAO
+- RWA + DeFi 2026 Ideas — curated from various public sources
+
+These files are structured extracts from publicly available material; the underlying content remains the property of the respective authors. The JSON shapes used here originated in the solana.new bundle and are reused under the same fair-use framing for educational and research purposes within stellar-build's idea-discovery skill.
+
+---
+
 ## Inspiration: solana.new
 
 The install pattern and skill-router architecture are inspired by [solana.new](https://www.solana.new) by SendAI and Superteam. No code or content is copied; only the architectural pattern.
