@@ -22,17 +22,17 @@ Party mode accepts optional arguments when invoked:
 
 1. **Parse arguments** — check for `--model` and `--solo` flags from the user's invocation.
 
-2. Load config from `{project-root}/_bmad/core/config.yaml` and resolve:
+2. Load config from `{project-root}/.stellar-build/core/config.yaml` and resolve:
   - Use `{user_name}` for greeting
   - Use `{communication_language}` for all communications
 
 3. **Resolve the agent roster** by running:
 
     ```bash
-    python3 {project-root}/_bmad/scripts/resolve_config.py --project-root {project-root} --key agents
+    python3 {project-root}/.stellar-build/scripts/resolve_config.py --project-root {project-root} --key agents
     ```
 
-    The resolver merges four layers in order: `_bmad/config.toml` (installer base, team-scoped), `_bmad/config.user.toml` (installer base, user-scoped), `_bmad/custom/config.toml` (team overrides), and `_bmad/custom/config.user.toml` (personal overrides). Each entry under `agents` is keyed by the agent's `code` and carries `name`, `title`, `icon`, `description`, `module`, and `team`. Build an internal roster of available agents from those fields.
+    The resolver merges four layers in order: `.stellar-build/config.toml` (installer base, team-scoped), `.stellar-build/config.user.toml` (installer base, user-scoped), `.stellar-build/custom/config.toml` (team overrides), and `.stellar-build/custom/config.user.toml` (personal overrides). Each entry under `agents` is keyed by the agent's `code` and carries `name`, `title`, `icon`, `description`, `module`, and `team`. Build an internal roster of available agents from those fields.
 
 4. **Load project context** — search for `**/project-context.md`. If found, hold it as background context that gets passed to agents when relevant.
 

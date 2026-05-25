@@ -52,7 +52,7 @@ After every outcome, present what was learned and pause for the user before cont
 
 ### Step 1: Resolve the workflow block
 
-Run: `python3 {project-root}/_bmad/scripts/resolve_customization.py --skill {skill-root} --key workflow`
+Run: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow`
 
 If the script fails, stop and surface the error.
 
@@ -67,7 +67,7 @@ Treat each entry in `{workflow.persistent_facts}` as foundational context. `file
 
 ### Step 4: Load config
 
-Load `{project-root}/_bmad/bmm/config.yaml` and resolve `{user_name}`, `{communication_language}`,
+Load `{project-root}/.stellar-build/bmm/config.yaml` and resolve `{user_name}`, `{communication_language}`,
 `{document_output_language}`, `{implementation_artifacts}`, `{project_knowledge}`. If `{implementation_artifacts}` is
 unresolved, fall back to `./investigations/` and surface the fallback before initializing.
 

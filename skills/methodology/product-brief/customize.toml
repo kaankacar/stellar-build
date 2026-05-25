@@ -3,8 +3,8 @@
 # Workflow customization surface for bmad-product-brief.
 #
 # Override files (not edited here):
-#   {project-root}/_bmad/custom/bmad-product-brief.toml         (team)
-#   {project-root}/_bmad/custom/bmad-product-brief.user.toml    (personal)
+#   {project-root}/.stellar-build/custom/bmad-product-brief.toml         (team)
+#   {project-root}/.stellar-build/custom/bmad-product-brief.user.toml    (personal)
 
 [workflow]
 
@@ -54,7 +54,7 @@ run_folder_pattern = "brief-{project_name}-{date}"
 #
 # Examples:
 #   "skill:bmad-editorial-review-prose"
-#   "file:{project-root}/_bmad/style-guides/company-voice.md"
+#   "file:{project-root}/.stellar-build/style-guides/company-voice.md"
 #   "Convert all dates to ISO 8601 format."
 #
 # Suggested order (broader passes first, narrower last):
