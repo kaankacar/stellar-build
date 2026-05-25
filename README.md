@@ -45,61 +45,59 @@ Talk to any of them naturally:
 
 ## Getting started
 
-After install, you have two ways to invoke skills.
+Skills install to both `~/.claude/skills/` and `~/.codex/skills/`, so the same prompts work whether you're in Claude Code, Codex CLI, or any agent that reads from those paths. Open your CLI and type prompts directly. There are two ways to invoke skills.
 
 **Natural language.** Describe what you want and the right skill auto-activates:
 
-```bash
-claude "what should I build on Stellar?"          # → find-stellar-idea
-claude "current SCF round"                        # → scf-round-watcher
-claude "deploy to mainnet"                        # → deploy-stellar-mainnet
-claude "talk to Nicole and write a PRD"           # → nicole-pm
+```
+what should I build on Stellar?          → find-stellar-idea
+current SCF round                        → scf-round-watcher
+deploy to mainnet                        → deploy-stellar-mainnet
+talk to Nicole and write a PRD           → nicole-pm
 ```
 
 **Slash commands.** Use these when you know exactly which skill you want:
 
-```bash
-claude "/stellar-help"        # how does this all work?
-claude "/navigate-skills"     # browse all 42 skills
-claude "/scf-round-watcher"   # explicit scf round fetch
 ```
-
-Codex CLI users: same prompts, no `claude` prefix needed. Skills install to both `~/.claude/skills/` and `~/.codex/skills/`.
+/stellar-help        how does this all work?
+/navigate-skills     browse all 42 skills
+/scf-round-watcher   explicit scf round fetch
+```
 
 ### A typical journey
 
-```bash
+```
 # 1. Idea
-claude "what should I build on Stellar?"
-# → find-stellar-idea interviews you, proposes 3 ranked ideas
+what should I build on Stellar?
+  → find-stellar-idea interviews you, proposes 3 ranked ideas
 
 # 2. Validate against existing ecosystem
-claude "who are my competitors?"
-# → stellar-competitive-landscape queries the 728-project DB
+who are my competitors?
+  → stellar-competitive-landscape queries the 728-project DB
 
 # 3. Plan with Nicole
-claude "talk to Nicole, let's write a PRD"
-# → nicole-pm walks PRD creation
+talk to Nicole, let's write a PRD
+  → nicole-pm walks PRD creation
 
 # 4. Architect with Tyler
-claude "talk to Tyler, design the architecture"
-# → tyler-architect + soroban/dapp skills
+talk to Tyler, design the architecture
+  → tyler-architect + soroban/dapp skills
 
 # 5. Build with Elliot
-claude "talk to Elliot, implement the first story"
-# → elliot-dev + dev-story
+talk to Elliot, implement the first story
+  → elliot-dev + dev-story
 
 # 6. Review before ship
-claude "code review"
-# → code-review + review-edge-case-hunter
+code review
+  → code-review + review-edge-case-hunter
 
 # 7. Deploy
-claude "deploy to Stellar mainnet"
-# → deploy-stellar-mainnet checklist
+deploy to Stellar mainnet
+  → deploy-stellar-mainnet checklist
 
 # 8. Apply for SCF
-claude "current SCF round"          # see what's open
-claude "draft my SCF submission"    # → scf-submission-drafter
+current SCF round              see what's open
+draft my SCF submission        → scf-submission-drafter
 ```
 
 ## How it works
