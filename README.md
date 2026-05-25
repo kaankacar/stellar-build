@@ -109,7 +109,7 @@ The install pulls from four canonical sources at install time:
 3. **`stellar/stellar-dev-skill`.** 7 Stellar dev knowledge modules (Soroban, dapp, assets, data, agentic-payments, zk-proofs, standards).
 4. **`lumenloop/stellar-ecosystem-db`.** Bundled snapshot of the 728-project YAML catalog, converted to JSON at build time.
 
-We don't redistribute upstream content from sources 2-3. Instead, the installer points your machine at the canonical sources. Attribution and licenses are in the "Built on" section below.
+We don't redistribute upstream content from sources 2-3. Instead, the installer points your machine at the canonical sources. See [NOTICES.md](./NOTICES.md) for attribution and licenses.
 
 ## Sandboxed / per-project install
 
@@ -148,11 +148,11 @@ The manifest at `~/.stellar/manifest.json` (or `$PREFIX/.stellar/manifest.json`)
 
 ## Built on
 
-- **[BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)** (MIT). Methodology skill backbone. Copyright (c) 2025 BMad Code, LLC. Personas paraphrased to match the SDF DevRel team; all other content preserved from upstream.
-- **[stellar/stellar-dev-skill](https://github.com/stellar/stellar-dev-skill)** (Apache 2.0). Official Stellar developer skills, fetched as-is from the upstream repo at install time. No modifications.
-- **[lumenloop/awesome-stellar-community-fund](https://github.com/lumenloop/awesome-stellar-community-fund)**. SCF grant lifecycle skills, used per direct agreement with LumenLoop.
-- **[lumenloop/stellar-ecosystem-db](https://github.com/lumenloop/stellar-ecosystem-db)**. 728-project database, used per direct agreement with LumenLoop.
-- **[electric-capital/open-dev-data](https://github.com/electric-capital/open-dev-data)** (MIT code + CC-BY 4.0 data). Developer activity taxonomy. Attribution required for the data; required attribution provided here.
-- **[stellar/ecosystem-resources](https://github.com/stellar/ecosystem-resources)**. Curated Stellar reference docs, used per direct agreement with the Stellar Development Foundation.
+- **[BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)** (MIT). Methodology skill backbone. Personas paraphrased to match the SDF DevRel team.
+- **[stellar/stellar-dev-skill](https://github.com/stellar/stellar-dev-skill)** (Apache 2.0). Official Stellar developer skills, fetched as-is from upstream at install time.
+- **[lumenloop/awesome-stellar-community-fund](https://github.com/lumenloop/awesome-stellar-community-fund)**. SCF grant lifecycle skills.
+- **[lumenloop/stellar-ecosystem-db](https://github.com/lumenloop/stellar-ecosystem-db)**. 728-project Stellar ecosystem database.
+- **[electric-capital/open-dev-data](https://github.com/electric-capital/open-dev-data)** (MIT + CC-BY 4.0). Developer activity taxonomy.
+- **[stellar/ecosystem-resources](https://github.com/stellar/ecosystem-resources)**. Curated Stellar reference docs.
 
-Inspired by the [solana.new](https://www.solana.new) install pattern.
+Full attributions in [NOTICES.md](./NOTICES.md). Inspired by the [solana.new](https://www.solana.new) install pattern.
