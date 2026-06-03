@@ -33,6 +33,22 @@ const toU32ScVal = (value: number): xdr.ScVal =>
 
 const createServer = (rpcUrl: string) => new StellarRpc.Server(rpcUrl);
 
+const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
+  "0": "Contract is already initialized.",
+  "1": "This wallet cannot send check-in for this initialized contract.",
+  "2": "Distribution has already been completed.",
+  "3": "The heartbeat timer has not expired yet.",
+  "4": "Beneficiary shares are invalid.",
+};
+
+const formatSimulationError = (message: string): string => {
+  const contractError = message.match(/Error\(Contract,\s*#(\d+)\)/);
+  if (contractError?.[1] && CONTRACT_ERROR_MESSAGES[contractError[1]]) {
+    return CONTRACT_ERROR_MESSAGES[contractError[1]];
+  }
+  return message || "Soroban simulation failed.";
+};
+
 const invokeContract = async ({
   contractId,
   method,
@@ -62,7 +78,7 @@ const invokeContract = async ({
 
   const simulation = await server.simulateTransaction(transaction);
   if (StellarRpc.Api.isSimulationError(simulation)) {
-    throw new Error(simulation.error ?? "Soroban simulation failed.");
+    throw new Error(formatSimulationError(simulation.error ?? ""));
   }
 
   transaction = StellarRpc.assembleTransaction(transaction, simulation).build();
@@ -114,7 +130,7 @@ export async function getContractState(contractId: string, rpcUrl: string): Prom
 
   const simulation = await server.simulateTransaction(transaction);
   if (StellarRpc.Api.isSimulationError(simulation)) {
-    const message = simulation.error ?? "Failed to read contract state.";
+    const message = formatSimulationError(simulation.error ?? "Failed to read contract state.");
     if (message.includes("UnreachableCodeReached") || message.includes("get_state")) {
       throw new Error("CONTRACT_NOT_INITIALIZED");
     }

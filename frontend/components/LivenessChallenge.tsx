@@ -60,10 +60,6 @@ type Props = {
   lastCheckin: number;
   checkinInterval: number;
   onCheckin: () => Promise<void>;
-  disabled?: boolean;       // true when wallet not owner / contract not set
-  walletConnected?: boolean;
-  isOwner?: boolean;
-  needsInitialize?: boolean;
   loading?: boolean;
 };
 
@@ -77,11 +73,11 @@ const TABS: { key: "math"|"stellar"|"mascot"; label: string; icon: string }[] = 
 
 export function LivenessChallenge({
   lastCheckin, checkinInterval, onCheckin,
-  disabled, walletConnected, isOwner, needsInitialize, loading,
+  loading,
 }: Props) {
   const [now,           setNow]           = useState<number|null>(null);
   const [tab,           setTab]           = useState<"math"|"stellar"|"mascot">("math");
-  const [challenge,     setChallenge]     = useState<Challenge>(() => makeMath());
+  const [challenge,     setChallenge]     = useState<Challenge | null>(null);
   const [solved,        setSolved]        = useState(false);
   const [input,         setInput]         = useState("");
   const [wrong,         setWrong]         = useState(false);
@@ -89,15 +85,18 @@ export function LivenessChallenge({
   const [mascotClicks,  setMascotClicks]  = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  /* live clock — null on server to prevent hydration mismatch */
+  /* live clock + initial challenge — both run client-only to prevent hydration mismatch */
   useEffect(() => {
     setNow(Math.floor(Date.now()/1000));
+    setChallenge(makeMath());
     const t = setInterval(() => setNow(Math.floor(Date.now()/1000)), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const remaining = now !== null ? Math.max(0, lastCheckin + checkinInterval - now) : null;
-  const expired   = remaining === 0;
+  const remaining = now !== null && lastCheckin !== 0
+    ? Math.max(0, lastCheckin + checkinInterval - now)
+    : null;
+  const expired = remaining === 0;
 
   /* switch tab → reset everything */
   const switchTab = (next: typeof tab) => {
@@ -109,14 +108,14 @@ export function LivenessChallenge({
 
   /* math */
   const submitMath = () => {
-    if (challenge.type !== "math") return;
+    if (!challenge || challenge.type !== "math") return;
     if (Number(input) === challenge.answer) { setSolved(true); setWrong(false); }
     else { setWrong(true); setInput(""); inputRef.current?.focus(); }
   };
 
   /* quiz */
   const pickOption = (i: number) => {
-    if (challenge.type !== "stellar" || solved) return;
+    if (!challenge || challenge.type !== "stellar" || solved) return;
     setSelectedOpt(i);
     if (i === challenge.correct) setTimeout(() => setSolved(true), 350);
     else { setWrong(true); setTimeout(() => { setWrong(false); setSelectedOpt(null); }, 700); }
@@ -124,7 +123,7 @@ export function LivenessChallenge({
 
   /* mascot */
   const feedMascot = () => {
-    if (challenge.type !== "mascot" || solved) return;
+    if (!challenge || challenge.type !== "mascot" || solved) return;
     const next = mascotClicks + 1;
     setMascotClicks(next);
     if (next >= (challenge as MascotChallenge).target) setSolved(true);
@@ -138,15 +137,7 @@ export function LivenessChallenge({
     setChallenge(makeChallenge(tab));
   };
 
-  /* why is the send button blocked? */
-  const blockReason: string | null =
-    !walletConnected  ? "Connect your Freighter wallet first." :
-    needsInitialize   ? "Use “Initialize as owner” above first — then you can check in." :
-    !isOwner          ? "Only the contract owner can send a check-in." :
-    !solved           ? null :   // challenge gate — no extra message needed
-    null;
-
-  const canSend = solved && !disabled && !loading;
+  const canSend = solved && !loading;
 
   const mascotStep = Math.min(mascotClicks, MASCOT.length - 1);
 
@@ -191,8 +182,12 @@ export function LivenessChallenge({
       {/* challenge body */}
       <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-5">
 
+        {!challenge && (
+          <p className="text-sm text-slate-400">Loading challenge…</p>
+        )}
+
         {/* ── MATH ── */}
-        {tab === "math" && challenge.type === "math" && (
+        {challenge && tab === "math" && challenge.type === "math" && (
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Solve to unlock</p>
             <p className="mt-3 text-4xl font-semibold text-white">{challenge.question}</p>
@@ -221,7 +216,7 @@ export function LivenessChallenge({
         )}
 
         {/* ── QUIZ ── */}
-        {tab === "stellar" && challenge.type === "stellar" && (
+        {challenge && tab === "stellar" && challenge.type === "stellar" && (
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Pick the right answer</p>
             <p className="mt-3 text-base font-semibold leading-6 text-white">{challenge.question}</p>
@@ -248,7 +243,7 @@ export function LivenessChallenge({
         )}
 
         {/* ── MASCOT ── */}
-        {tab === "mascot" && challenge.type === "mascot" && (
+        {challenge && tab === "mascot" && challenge.type === "mascot" && (
           <div className="text-center">
             <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
               Feed the mascot · tap {challenge.target} times
@@ -281,7 +276,7 @@ export function LivenessChallenge({
         )}
       </div>
 
-      {/* send button + reason */}
+      {/* send button */}
       <div className="mt-4 space-y-2">
         <button
           type="button"
@@ -291,11 +286,6 @@ export function LivenessChallenge({
         >
           {loading ? "Sending…" : solved ? "Send check-in ✓" : "Solve the challenge first"}
         </button>
-
-        {/* show reason when challenge is solved but still blocked */}
-        {solved && blockReason && (
-          <p className="text-center text-xs text-rose-300">{blockReason}</p>
-        )}
       </div>
     </div>
   );

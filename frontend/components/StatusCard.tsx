@@ -88,8 +88,11 @@ export function StatusCard({ state }: StatusCardProps) {
               />
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-              <span>
-                Last check-in: {new Date(state.lastCheckin * 1000).toLocaleString()}
+              <span suppressHydrationWarning>
+                Last check-in:{" "}
+                {state.lastCheckin === 0
+                  ? "—"
+                  : new Date(state.lastCheckin * 1000).toLocaleString()}
               </span>
               <span>Interval: {formatDuration(state.checkinInterval)}</span>
             </div>

@@ -13,6 +13,34 @@ export interface ConnectedWallet {
   isTestnet: boolean;
 }
 
+const formatRpcSubmissionError = (response: StellarRpc.Api.SendTransactionResponse): string => {
+  const errorResult = response.errorResult;
+
+  if (!errorResult) {
+    return `Transaction submission failed with status ${response.status}.`;
+  }
+
+  try {
+    const result = errorResult.result();
+    const resultSwitch = result.switch();
+    return `Transaction submission failed: ${resultSwitch.name}.`;
+  } catch {
+    return "Transaction submission failed. Please refresh the page and try again.";
+  }
+};
+
+const normalizeTransactionError = (error: unknown): Error => {
+  if (!(error instanceof Error)) {
+    return new Error("Transaction failed.");
+  }
+
+  if (error.message.toLowerCase().includes("bad union switch")) {
+    return new Error("Transaction XDR could not be decoded. Please hard refresh the page and try again.");
+  }
+
+  return error;
+};
+
 /**
  * Connects to Freighter and returns the current wallet identity.
  * Uses requestAccess (v4 API) which handles both permission prompt and address retrieval.
@@ -58,29 +86,39 @@ export async function signAndSubmit(
   if (signResult.error) {
     throw new Error("Freighter signing failed: " + String(signResult.error));
   }
+  if (!signResult.signedTxXdr) {
+    throw new Error("Freighter did not return a signed transaction.");
+  }
 
   const server = new StellarRpc.Server(rpcUrl);
-  const transaction = TransactionBuilder.fromXDR(
-    signResult.signedTxXdr,
-    networkPassphrase,
-  ) as Transaction;
+  let transaction: Transaction;
+  try {
+    transaction = TransactionBuilder.fromXDR(signResult.signedTxXdr, networkPassphrase) as Transaction;
+  } catch (error) {
+    throw normalizeTransactionError(error);
+  }
 
-  const response = await server.sendTransaction(transaction);
+  const response = await server.sendTransaction(transaction).catch((error: unknown) => {
+    throw normalizeTransactionError(error);
+  });
   if (response.status === "ERROR") {
-    const errMsg = response.errorResult
-      ? response.errorResult.toXDR("base64")
-      : "Transaction submission failed.";
-    throw new Error(errMsg);
+    throw new Error(formatRpcSubmissionError(response));
   }
 
   let finalStatus: string = response.status;
   for (let attempt = 0; attempt < 15; attempt += 1) {
-    const result = await server.getTransaction(response.hash);
+    const result = await server.getTransaction(response.hash).catch((error: unknown) => {
+      throw normalizeTransactionError(error);
+    });
     if (result.status !== StellarRpc.Api.GetTransactionStatus.NOT_FOUND) {
       finalStatus = result.status;
       break;
     }
     await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+
+  if (finalStatus === StellarRpc.Api.GetTransactionStatus.FAILED) {
+    throw new Error("Transaction failed on-chain.");
   }
 
   return { hash: response.hash, status: finalStatus };

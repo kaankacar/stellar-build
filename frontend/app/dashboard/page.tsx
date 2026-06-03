@@ -29,7 +29,7 @@ const EXPLORER_BASE = "https://stellar.expert/explorer/testnet/tx";
 const emptyState: ContractState = {
   owner: "",
   beneficiaries: [],
-  lastCheckin: Math.floor(Date.now() / 1000),
+  lastCheckin: 0,
   checkinInterval: 86_400,
   distributed: false,
 };
@@ -281,10 +281,6 @@ export default function DashboardPage() {
               lastCheckin={contractState.lastCheckin}
               checkinInterval={contractState.checkinInterval}
               onCheckin={handleCheckin}
-              disabled={!canInteract || loadingAction}
-              walletConnected={Boolean(walletAddress)}
-              isOwner={isOwner}
-              needsInitialize={Boolean(walletAddress && hasContract && !contractInitialized)}
               loading={loadingAction}
             />
             <DistributionTrigger
