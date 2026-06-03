@@ -15,6 +15,7 @@ import {
   buildAddBeneficiaryTx,
   buildCheckinTx,
   buildDistributionTx,
+  buildInitializeTx,
   buildRemoveBeneficiaryTx,
   buildUpdateCheckinIntervalTx,
   getContractState,
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [loadingAction, setLoadingAction] = useState(false);
   const [loadingState, setLoadingState] = useState(false);
   const [contractState, setContractState] = useState<ContractState>(emptyState);
+  const [contractInitialized, setContractInitialized] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
   const [freighterMissing, setFreighterMissing] = useState(false);
 
@@ -63,6 +65,7 @@ export default function DashboardPage() {
     setLoadingState(true);
     try {
       const nextState = await getContractState(CONTRACT_ID, RPC_URL);
+      setContractInitialized(true);
       setContractState((current) => ({
         ...current,
         ...nextState,
@@ -70,6 +73,11 @@ export default function DashboardPage() {
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to load state.";
+      if (message === "CONTRACT_NOT_INITIALIZED") {
+        setContractInitialized(false);
+        setContractState(emptyState);
+        return;
+      }
       toast.error(message);
     } finally {
       setLoadingState(false);
@@ -163,6 +171,13 @@ export default function DashboardPage() {
     );
   };
 
+  const handleInitialize = async () => {
+    await submitAction(
+      () => buildInitializeTx(CONTRACT_ID, walletAddress ?? "", 300, RPC_URL, NETWORK_PASSPHRASE),
+      "Contract initialized — you are the owner.",
+    );
+  };
+
   const handleCheckin = async () => {
     await submitAction(
       () => buildCheckinTx(CONTRACT_ID, walletAddress ?? "", RPC_URL, NETWORK_PASSPHRASE),
@@ -223,6 +238,25 @@ export default function DashboardPage() {
           />
         </header>
 
+        {walletAddress && hasContract && !contractInitialized && (
+          <div className="rounded-[2rem] border border-ember-400/30 bg-ember-400/10 p-6">
+            <p className="text-xs uppercase tracking-[0.2em] text-ember-300">One-time setup</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Claim contract ownership</h2>
+            <p className="mt-2 max-w-2xl text-sm text-slate-300">
+              This contract is not initialized yet. Freighter will ask you to sign as{" "}
+              <span className="font-mono text-white">{walletAddress}</span> — that wallet becomes the on-chain owner.
+            </p>
+            <button
+              type="button"
+              onClick={handleInitialize}
+              disabled={loadingAction}
+              className="mt-4 rounded-full bg-ember-400 px-5 py-2.5 text-sm font-semibold text-ink-950 transition hover:bg-ember-300 disabled:opacity-60"
+            >
+              {loadingAction ? "Signing…" : "Initialize as owner (5 min check-in interval)"}
+            </button>
+          </div>
+        )}
+
         <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="grid gap-6">
             <StatusCard state={contractState} />
@@ -250,6 +284,7 @@ export default function DashboardPage() {
               disabled={!canInteract || loadingAction}
               walletConnected={Boolean(walletAddress)}
               isOwner={isOwner}
+              needsInitialize={Boolean(walletAddress && hasContract && !contractInitialized)}
               loading={loadingAction}
             />
             <DistributionTrigger

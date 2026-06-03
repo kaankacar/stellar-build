@@ -63,6 +63,7 @@ type Props = {
   disabled?: boolean;       // true when wallet not owner / contract not set
   walletConnected?: boolean;
   isOwner?: boolean;
+  needsInitialize?: boolean;
   loading?: boolean;
 };
 
@@ -76,7 +77,7 @@ const TABS: { key: "math"|"stellar"|"mascot"; label: string; icon: string }[] = 
 
 export function LivenessChallenge({
   lastCheckin, checkinInterval, onCheckin,
-  disabled, walletConnected, isOwner, loading,
+  disabled, walletConnected, isOwner, needsInitialize, loading,
 }: Props) {
   const [now,           setNow]           = useState<number|null>(null);
   const [tab,           setTab]           = useState<"math"|"stellar"|"mascot">("math");
@@ -140,6 +141,7 @@ export function LivenessChallenge({
   /* why is the send button blocked? */
   const blockReason: string | null =
     !walletConnected  ? "Connect your Freighter wallet first." :
+    needsInitialize   ? "Use “Initialize as owner” above first — then you can check in." :
     !isOwner          ? "Only the contract owner can send a check-in." :
     !solved           ? null :   // challenge gate — no extra message needed
     null;

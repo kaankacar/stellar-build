@@ -114,7 +114,11 @@ export async function getContractState(contractId: string, rpcUrl: string): Prom
 
   const simulation = await server.simulateTransaction(transaction);
   if (StellarRpc.Api.isSimulationError(simulation)) {
-    throw new Error(simulation.error ?? "Failed to read contract state.");
+    const message = simulation.error ?? "Failed to read contract state.";
+    if (message.includes("UnreachableCodeReached") || message.includes("get_state")) {
+      throw new Error("CONTRACT_NOT_INITIALIZED");
+    }
+    throw new Error(message);
   }
 
   const rawResult = simulation.result?.retval ?? null;

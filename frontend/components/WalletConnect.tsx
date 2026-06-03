@@ -45,15 +45,11 @@ export function WalletConnect({
           )}
 
           {/* Owner badge */}
-          {connected && (
+          {connected && isOwner && (
             <span
-              className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-medium ${
-                isOwner
-                  ? "bg-emerald-400/15 text-emerald-300"
-                  : "bg-white/5 text-slate-400"
-              }`}
+              className="mt-2 inline-block rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-medium text-emerald-300"
             >
-              {isOwner ? "✓ Owner" : "Not the owner"}
+              ✓ Owner
             </span>
           )}
 
