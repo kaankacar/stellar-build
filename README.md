@@ -1,171 +1,123 @@
-# stellar-build
+# Harta — Crypto Inheritance on Stellar
 
-A one-command install that drops an end-to-end Stellar development journey into your Claude Code and OpenAI Codex CLI setup. From "what should I build?" to mainnet deploy and Stellar Community Fund grant submission, in 42 skills plus curated ecosystem data.
+> *$2 trillion in crypto assets will be lost forever because there's no trustless way to pass them on. Harta fixes this with 3 on-chain transactions and zero intermediaries.*
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/kaankacar/stellar-build/main/install.sh | bash
-```
+Harta is a decentralized inheritance layer built on Soroban (Stellar). The owner checks in periodically via a dead man's switch; when the heartbeat timer expires, any wallet can trigger the distribution and assets flow to pre-defined beneficiaries — trustlessly.
 
-## What you get
+**Live testnet contract:** `CBJNI4GNQQMULSWLRTE7LSCGOGIEX46DAMR75BGHOQHTM5JFHGQLFAPS`
+[View on Stellar Expert →](https://stellar.expert/explorer/testnet/contract/CBJNI4GNQQMULSWLRTE7LSCGOGIEX46DAMR75BGHOQHTM5JFHGQLFAPS)
 
-**42 skills across the full journey:**
-
-- **Idea phase.** Discover what to build on Stellar, validate against the 728-project ecosystem, watch the live SCF round.
-- **Planning phase.** PRD, UX design, and product brief, driven by personas from the SDF DevRel team.
-- **Solutioning phase.** Architecture, epics, stories, plus deep Soroban + dapp + asset knowledge from `stellar/stellar-dev-skill`.
-- **Implementation phase.** Story-driven dev, code review, and debugging.
-- **Launch phase.** Devnet to mainnet deploy plus 10 SCF grant lifecycle skills.
-
-**Curated data:**
-
-- The full LumenLoop ecosystem catalog (728 projects, SCF rounds, audits, tokens)
-- Electric Capital's Stellar developer taxonomy (9,027 catalogued repos)
-- Stellar Foundation's ecosystem-resources reference docs
-
-## Meet your team
-
-stellar-build gives you six AI agents with distinct roles, named for the SDF DevRel team. Call any of them by name to swap into their persona:
-
-| Persona | Role | Call them when... |
-|---------|------|-------------------|
-| **Justin** | Business Analyst | you need market research, competitive analysis, requirements elicitation |
-| **Bri** | Tech Writer | you need documentation, knowledge curation, technical writing |
-| **Nicole** | Product Manager | you need PRDs, requirements discovery, stakeholder alignment |
-| **Kaan** | UX Designer | you need interaction design, UX specifications |
-| **Tyler** | System Architect | you need architecture decisions, Soroban contract design |
-| **Elliot** | Senior Developer | you need code, story execution, implementation |
-
-Talk to any of them naturally:
-
-```
-"talk to Tyler"             → adopts the architect persona
-"Justin, who are my competitors on Stellar?"  → analyst with context
-"party mode"                → all six in one group discussion (see note below)
-```
-
-### Multi-agent party mode requirement
-
-For `/party-mode` to spawn each persona as a real isolated subagent (rather than one LLM roleplaying everyone in solo mode), your project folder needs to be a git repo with at least one commit. Claude Code uses git worktrees for subagent isolation, which need a HEAD ref to branch from.
-
-If you see "not in a git repository" or "no HEAD" errors when running party mode, run:
-
-```bash
-git init
-git commit --allow-empty -m "init"
-```
-
-The empty commit is the trick. Once you have it, `/party-mode` spawns each persona in its own worktree and they think independently. Without the commit, party mode still runs but in solo mode (single LLM, six voices).
-
-## Getting started
-
-Skills install to both `~/.claude/skills/` and `~/.codex/skills/`, so the same prompts work whether you're in Claude Code, Codex CLI, or any agent that reads from those paths. Open your CLI and type prompts directly. There are two ways to invoke skills.
-
-**Natural language.** Describe what you want and the right skill auto-activates:
-
-```
-what should I build on Stellar?          → find-stellar-idea
-current SCF round                        → scf-round-watcher
-deploy to mainnet                        → deploy-stellar-mainnet
-talk to Nicole and write a PRD           → nicole-pm
-```
-
-**Slash commands.** Use these when you know exactly which skill you want:
-
-```
-/stellar-help        how does this all work?
-/navigate-skills     browse all 42 skills
-/scf-round-watcher   explicit scf round fetch
-```
-
-### A typical journey
-
-```
-# 1. Idea
-what should I build on Stellar?
-  → find-stellar-idea interviews you, proposes 3 ranked ideas
-
-# 2. Validate against existing ecosystem
-who are my competitors?
-  → stellar-competitive-landscape queries the 728-project DB
-
-# 3. Plan with Nicole
-talk to Nicole, let's write a PRD
-  → nicole-pm walks PRD creation
-
-# 4. Architect with Tyler
-talk to Tyler, design the architecture
-  → tyler-architect + soroban/dapp skills
-
-# 5. Build with Elliot
-talk to Elliot, implement the first story
-  → elliot-dev + dev-story
-
-# 6. Review before ship
-code review
-  → code-review + review-edge-case-hunter
-
-# 7. Deploy
-deploy to Stellar mainnet
-  → deploy-stellar-mainnet checklist
-
-# 8. Apply for SCF
-current SCF round              see what's open
-draft my SCF submission        → scf-submission-drafter
-```
+---
 
 ## How it works
 
-The install pulls from four canonical sources at install time:
-
-1. **This repo** (`kaankacar/stellar-build`). 20 paraphrased BMAD methodology skills plus 5 new Stellar-specific skills plus the installer plus bundled data.
-2. **`lumenloop/awesome-stellar-community-fund`.** 10 SCF lifecycle skills.
-3. **`stellar/stellar-dev-skill`.** 7 Stellar dev knowledge modules (Soroban, dapp, assets, data, agentic-payments, zk-proofs, standards).
-4. **`lumenloop/stellar-ecosystem-db`.** Bundled snapshot of the 728-project YAML catalog, converted to JSON at build time.
-
-We don't redistribute upstream content from sources 2-3. Instead, the installer points your machine at the canonical sources. See [NOTICES.md](./NOTICES.md) for attribution and licenses.
-
-## Sandboxed / per-project install
-
-You can install stellar-build into a specific project folder instead of your global `$HOME`. This is useful when you want the skills *scoped to one project*:
-
-```bash
-mkdir my-stellar-project && cd my-stellar-project
-curl -fsSL https://raw.githubusercontent.com/kaankacar/stellar-build/main/install.sh | bash -s -- --prefix=$(pwd)
+```
+Owner sets up a plan (beneficiaries + check-in interval)
+         ↓
+Owner sends periodic check-ins (heartbeat)
+         ↓
+Timer expires → anyone triggers distribution
+         ↓
+Token balance flows to beneficiaries by share (bps)
 ```
 
-This installs to `./my-stellar-project/.claude/skills/` and `./my-stellar-project/.codex/skills/`. When you `cd` into the project and run `claude` (or `codex`), the CLI reads project-local skills from `.claude/skills/` automatically, so all 42 skills work for *this project only*.
+## Project structure
 
-That makes sandboxed install useful in two scenarios:
-
-1. **Per-project skills.** You want stellar-build active for one specific Stellar project, not globally.
-2. **Testing without affecting your real `$HOME`.** Try the bundle on a throwaway folder before committing to a global install.
-
-Project-local installs don't conflict with each other or with a global install. Claude Code merges global and project skills automatically.
-
-## Update
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/kaankacar/stellar-build/main/install.sh | bash -s -- --update
+```
+contracts/harta/    Soroban smart contract (Rust)
+frontend/           Next.js 14 App Router dApp
+.env.example        Required environment variables
 ```
 
-This re-runs the install, pulling fresh versions of all sources. Skills you've added manually to `~/.claude/skills/` from other places are untouched.
+## Quick start
 
-## Uninstall
+### 1. Frontend
 
 ```bash
-./install.sh --uninstall                              # global
-./install.sh --uninstall --prefix=$(pwd)/my-project   # project-local
+cd frontend
+cp ../.env.example .env.local   # fill in contract ID
+npm install
+npm run dev
 ```
 
-The manifest at `~/.stellar/manifest.json` (or `$PREFIX/.stellar/manifest.json`) tracks every path and permission stellar-build touched, so uninstall reverses cleanly.
+Open [http://localhost:3000](http://localhost:3000), then go to `/dashboard`.
 
-## Built on
+### 2. Environment variables
 
-- **[BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)** (MIT). Methodology skill backbone. Personas paraphrased to match the SDF DevRel team.
-- **[stellar/stellar-dev-skill](https://github.com/stellar/stellar-dev-skill)** (Apache 2.0). Official Stellar developer skills, fetched as-is from upstream at install time.
-- **[lumenloop/awesome-stellar-community-fund](https://github.com/lumenloop/awesome-stellar-community-fund)**. SCF grant lifecycle skills.
-- **[lumenloop/stellar-ecosystem-db](https://github.com/lumenloop/stellar-ecosystem-db)**. 728-project Stellar ecosystem database.
-- **[electric-capital/open-dev-data](https://github.com/electric-capital/open-dev-data)** (MIT + CC-BY 4.0). Developer activity taxonomy.
-- **[stellar/ecosystem-resources](https://github.com/stellar/ecosystem-resources)**. Curated Stellar reference docs.
+Create `frontend/.env.local`:
 
-Full attributions in [NOTICES.md](./NOTICES.md). Inspired by the [solana.new](https://www.solana.new) install pattern.
+```env
+NEXT_PUBLIC_CONTRACT_ID=CBJNI4GNQQMULSWLRTE7LSCGOGIEX46DAMR75BGHOQHTM5JFHGQLFAPS
+NEXT_PUBLIC_TOKEN_CONTRACT_ID=          # SAC address of the token held by the contract
+NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
+```
+
+### 3. Deploy your own contract
+
+```bash
+# Build
+cd contracts/harta
+stellar contract build
+
+# Create and fund a testnet key
+stellar keys generate my-key --network testnet
+curl "https://friendbot.stellar.org/?addr=$(stellar keys address my-key)"
+
+# Deploy
+stellar contract deploy \
+  --network testnet \
+  --source my-key \
+  --wasm target/wasm32v1-none/release/harta.wasm
+
+# Initialize (replace values)
+stellar contract invoke \
+  --network testnet \
+  --source my-key \
+  --id <CONTRACT_ID> \
+  -- initialize \
+  --owner <OWNER_ADDRESS> \
+  --checkin_interval 86400
+```
+
+---
+
+## Live demo flow (60-second version)
+
+To show the full end-to-end flow during a demo, deploy a fresh contract and initialize it with `--checkin_interval 60`, then:
+
+1. Connect Freighter in `/dashboard`
+2. Add at least one beneficiary wallet + share (e.g. 10000 bps = 100%)
+3. Click **Send check-in** — note the explorer link that appears
+4. Wait 60 seconds (or skip forward via `update_checkin_interval 1`)
+5. Click **Trigger distribution** — assets move on-chain
+
+Every transaction produces an explorer link directly in the UI under **Last transaction — on-chain proof**.
+
+---
+
+## Contract API
+
+| Function | Who calls | What it does |
+|---|---|---|
+| `initialize(owner, checkin_interval)` | owner | Sets up the contract |
+| `checkin(caller)` | owner | Resets the heartbeat timer |
+| `add_beneficiary(caller, beneficiary, share_bps)` | owner | Adds/updates a beneficiary |
+| `remove_beneficiary(caller, beneficiary)` | owner | Removes a beneficiary |
+| `update_checkin_interval(caller, new_interval)` | owner | Changes the timeout |
+| `trigger_distribution(token)` | anyone (after expiry) | Distributes token balance |
+| `get_state()` | anyone | Returns the current snapshot |
+
+Shares are in **basis points** (100 bps = 1%). Total must equal exactly 10,000 bps for a full distribution.
+
+---
+
+## Tech stack
+
+| Layer | Tech |
+|---|---|
+| Smart contract | Rust + Soroban SDK 21 |
+| Frontend | Next.js 14 App Router + TypeScript |
+| Styling | Tailwind CSS |
+| Wallet | Freighter API |
+| Network | Stellar Testnet (Soroban RPC) |

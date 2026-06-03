@@ -6,6 +6,18 @@ smoke-test/
 # Source repos cloned for build (populated by tools/bootstrap-sources.sh)
 sources/
 
+# Frontend build output
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+
+# Soroban contract build output
+contracts/harta/target/
+
+# Local env files
+.env.local
+
 # macOS
 .DS_Store
 
