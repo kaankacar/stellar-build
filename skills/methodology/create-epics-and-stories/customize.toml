@@ -1,6 +1,6 @@
 # DO NOT EDIT -- overwritten on every update.
 #
-# Workflow customization surface for bmad-create-epics-and-stories. Mirrors the
+# Workflow customization surface for create-epics-and-stories. Mirrors the
 # agent customization shape under the [workflow] namespace.
 
 [workflow]
@@ -35,7 +35,7 @@ persistent_facts = [
 ]
 
 # Scalar: executed when the workflow reaches Step 4 (Final Validation) and the
-# user confirms [C] Complete — after the epics.md is saved and bmad-help is invoked.
+# user confirms [C] Complete — after the epics.md is saved and stellar-help is invoked.
 # Override wins. Leave empty for no custom post-completion behavior.
 
 on_complete = ""

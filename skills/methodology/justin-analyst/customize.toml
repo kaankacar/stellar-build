@@ -57,7 +57,7 @@ principles = [
 [[agent.menu]]
 code = "BP"
 description = "Expert guided brainstorming facilitation"
-skill = "bmad-brainstorming"
+skill = "brainstorming"
 
 [[agent.menu]]
 code = "MR"
@@ -77,12 +77,12 @@ skill = "bmad-technical-research"
 [[agent.menu]]
 code = "CB"
 description = "Create or update product briefs through guided or autonomous discovery"
-skill = "bmad-product-brief"
+skill = "product-brief"
 
 [[agent.menu]]
 code = "WB"
 description = "Working Backwards PRFAQ challenge — forge and stress-test product concepts"
-skill = "bmad-prfaq"
+skill = "prfaq"
 
 [[agent.menu]]
 code = "DP"

@@ -1,10 +1,10 @@
 # DO NOT EDIT -- overwritten on every update.
 #
-# Workflow customization surface for bmad-product-brief.
+# Workflow customization surface for product-brief.
 #
 # Override files (not edited here):
-#   {project-root}/.stellar-build/custom/bmad-product-brief.toml         (team)
-#   {project-root}/.stellar-build/custom/bmad-product-brief.user.toml    (personal)
+#   {project-root}/.stellar-build/custom/product-brief.toml         (team)
+#   {project-root}/.stellar-build/custom/product-brief.user.toml    (personal)
 
 [workflow]
 

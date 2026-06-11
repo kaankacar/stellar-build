@@ -203,8 +203,8 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 #### Menu Handling Logic:
 
-- IF A: Invoke the `bmad-advanced-elicitation` skill
-- IF P: Invoke the `bmad-party-mode` skill
+- IF A: Invoke the `advanced-elicitation` skill
+- IF P: Invoke the `party-mode` skill
 - IF C: Save approved epics_list to {planning_artifacts}/epics.md, update frontmatter, then read fully and follow: ./step-03-create-stories.md
 - IF Any other comments or queries: help user respond then [Redisplay Menu Options](#8-present-menu-options)
 

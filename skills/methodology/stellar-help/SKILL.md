@@ -22,7 +22,7 @@ When this skill completes, the user should:
 
 ## Data Sources
 
-- **Catalog**: `{project-root}/.stellar-build/_config/bmad-help.csv` — assembled manifest of all installed module skills
+- **Catalog**: `{project-root}/.stellar-build/_config/stellar-help.csv` — assembled manifest of all installed module skills
 - **Config**: `config.yaml` and `user-config.yaml` files in `{project-root}/.stellar-build/` and its subfolders — resolve `output-location` variables, provide `communication_language` and `project_knowledge`
 - **Artifacts**: Files matching `outputs` patterns at resolved `output-location` paths reveal which steps are possibly completed; their content may also provide grounding context for recommendations
 - **Project knowledge**: If `project_knowledge` resolves to an existing path, read it for grounding context. Never fabricate project-specific details.
@@ -60,7 +60,7 @@ module,skill,display-name,menu-code,description,action,args,phase,preceded-by,fo
 
 For each recommended item, present:
 - `[menu-code]` **Display name** — e.g., "[PR] PRD"
-- Skill name in backticks — e.g., `bmad-prd`
+- Skill name in backticks — e.g., `prd`
 - For multi-action skills: action invocation context — e.g., "tech-writer lets create a mermaid diagram!"
 - Description if present in CSV; otherwise your existing knowledge of the skill suffices
 - Args if available

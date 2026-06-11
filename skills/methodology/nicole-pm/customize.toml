@@ -57,12 +57,12 @@ principles = [
 [[agent.menu]]
 code = "PRD"
 description = "Create, update, or validate a PRD — state your intent or the skill will ask"
-skill = "bmad-prd"
+skill = "prd"
 
 [[agent.menu]]
 code = "CE"
 description = "Create the Epics and Stories Listing that will drive development"
-skill = "bmad-create-epics-and-stories"
+skill = "create-epics-and-stories"
 
 [[agent.menu]]
 code = "IR"

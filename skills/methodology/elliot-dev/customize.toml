@@ -57,7 +57,7 @@ principles = [
 [[agent.menu]]
 code = "DS"
 description = "Write the next or specified story's tests and code"
-skill = "bmad-dev-story"
+skill = "dev-story"
 
 [[agent.menu]]
 code = "QD"
@@ -72,7 +72,7 @@ skill = "bmad-qa-generate-e2e-tests"
 [[agent.menu]]
 code = "CR"
 description = "Initiate a comprehensive code review across multiple quality facets"
-skill = "bmad-code-review"
+skill = "code-review"
 
 [[agent.menu]]
 code = "SP"
@@ -92,4 +92,4 @@ skill = "bmad-retrospective"
 [[agent.menu]]
 code = "IN"
 description = "Forensic case investigation with evidence-graded findings, calibrated to the input"
-skill = "bmad-investigate"
+skill = "investigate"

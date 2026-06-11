@@ -1,6 +1,6 @@
 # Headless Mode
 
-Load this file when bmad-prd is invoked headless (no interactive user). Follow it for the whole run.
+Load this file when prd is invoked headless (no interactive user). Follow it for the whole run.
 
 ## Detection
 

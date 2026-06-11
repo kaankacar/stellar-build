@@ -31,8 +31,8 @@ This step will generate content and present choices:
 
 ## PROTOCOL INTEGRATION:
 
-- When 'A' selected: Invoke the `bmad-advanced-elicitation` skill
-- When 'P' selected: Invoke the `bmad-party-mode` skill
+- When 'A' selected: Invoke the `advanced-elicitation` skill
+- When 'P' selected: Invoke the `party-mode` skill
 - PROTOCOLS always return to this step's A/P/C menu
 - User accepts/rejects protocol changes before proceeding
 
@@ -183,7 +183,7 @@ Show the generated UX patterns content and present choices:
 
 #### If 'A' (Advanced Elicitation):
 
-- Invoke the `bmad-advanced-elicitation` skill with the current UX patterns content
+- Invoke the `advanced-elicitation` skill with the current UX patterns content
 - Process the enhanced pattern insights that come back
 - Ask user: "Accept these improvements to the UX patterns? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu
@@ -191,7 +191,7 @@ Show the generated UX patterns content and present choices:
 
 #### If 'P' (Party Mode):
 
-- Invoke the `bmad-party-mode` skill with the current UX patterns
+- Invoke the `party-mode` skill with the current UX patterns
 - Process the collaborative pattern insights that come back
 - Ask user: "Accept these changes to the UX patterns? (y/n)"
 - If yes: Update content with improvements, then return to A/P/C menu

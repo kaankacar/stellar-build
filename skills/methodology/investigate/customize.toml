@@ -1,6 +1,6 @@
 # DO NOT EDIT -- overwritten on every update.
 #
-# Workflow customization surface for bmad-investigate. Mirrors the
+# Workflow customization surface for investigate. Mirrors the
 # agent customization shape under the [workflow] namespace.
 
 [workflow]

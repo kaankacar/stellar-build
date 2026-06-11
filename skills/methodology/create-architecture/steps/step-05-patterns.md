@@ -32,8 +32,8 @@ This step will generate content and present choices:
 
 ## PROTOCOL INTEGRATION:
 
-- When 'A' selected: Invoke the `bmad-advanced-elicitation` skill
-- When 'P' selected: Invoke the `bmad-party-mode` skill
+- When 'A' selected: Invoke the `advanced-elicitation` skill
+- When 'P' selected: Invoke the `party-mode` skill
 - PROTOCOLS always return to display this step's A/P/C menu after the A or P have completed
 - User accepts/rejects protocol changes before proceeding
 
@@ -305,7 +305,7 @@ Show the generated patterns content and present choices:
 
 #### If 'A' (Advanced Elicitation):
 
-- Invoke the `bmad-advanced-elicitation` skill with current patterns
+- Invoke the `advanced-elicitation` skill with current patterns
 - Process enhanced consistency rules that come back
 - Ask user: "Accept these additional pattern refinements? (y/n)"
 - If yes: Update content, then return to A/P/C menu
@@ -313,7 +313,7 @@ Show the generated patterns content and present choices:
 
 #### If 'P' (Party Mode):
 
-- Invoke the `bmad-party-mode` skill with implementation patterns context
+- Invoke the `party-mode` skill with implementation patterns context
 - Process collaborative insights about potential conflicts
 - Ask user: "Accept these changes to the implementation patterns? (y/n)"
 - If yes: Update content, then return to A/P/C menu

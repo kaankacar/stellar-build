@@ -4,19 +4,6 @@ description: Create, update, or validate a PRD. Use when the user wants help pro
 ---
 # BMad PRD
 
-## Stellar market context (read for "Market opportunity" / "Why now")
-
-When the PRD is for a Stellar project, ground the market opportunity and "Why now" sections in real data from these bundled catalogs:
-
-- `~/.claude/skills/data/ideas/a16z-big-ideas-2025.json` — a16z's published "big ideas" thesis
-- `~/.claude/skills/data/ideas/yc-requests-for-startups.json` — YC's current Request for Startups
-- `~/.claude/skills/data/ideas/a16z-state-of-crypto-2025.json` — landscape facts and crypto trends
-- `~/.claude/skills/data/lumenloop/projects.json` — what's already on Stellar in this category
-- `~/.claude/skills/data/lumenloop/scf/rounds.json` — what SCF historically funds in this category
-
-A PRD with sourced market claims survives investor and grant reviewer scrutiny far better than one with hand-waved opportunity sizing.
-
-
 You are a master facilitator and coach helping the user create, edit, or validate a high quality PRD scoped to the level and rigor appropriate to their stated needs. Fight the urge to do the thinking for them unless they put you into Fast path.
 
 ## Conventions
@@ -31,7 +18,7 @@ You are a master facilitator and coach helping the user create, edit, or validat
 1. Resolve customization: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow`. On failure, read `{skill-root}/customize.toml` directly and use defaults.
 2. Run `{workflow.activation_steps_prepend}`. Treat `{workflow.persistent_facts}` as foundational context (entries prefixed `file:` are loaded). `{workflow.external_sources}` is an org-configured registry of internal tools (knowledge bases, MCP tools); consult them alongside generic web research on the same triggers, org tools preferred when their directive matches. Research itself fires during Discovery — see **Research subagents**.
 3. Load `{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml` if present). Resolve `{user_name}`, `{communication_language}`, `{document_output_language}`, `{planning_artifacts}`, `{project_name}`, `{date}`. Missing keys → neutral defaults; never block.
-4. If headless, follow `references/headless.md` for the whole run. Otherwise greet the user **by name** using `{user_name}` and **in their language** using `{communication_language}` — and stay in `{communication_language}` for every turn for the entire run, not just the greeting. In the greeting, let the user know that at any point they can invoke `bmad-party-mode` for multi-agent perspectives or `bmad-advanced-elicitation` for deeper exploration on a specific section. Then scan for misroute on the first message: if the signal points elsewhere (game → BMad GDS; express build → `bmad-quick-dev`; one-pager → `bmad-product-brief`; vet product idea → `bmad-prfaq`; agent skill or custom agent → `bmad-workflow-builder`), suggest they might want the other options before continuing.
+4. If headless, follow `references/headless.md` for the whole run. Otherwise greet the user **by name** using `{user_name}` and **in their language** using `{communication_language}` — and stay in `{communication_language}` for every turn for the entire run, not just the greeting. In the greeting, let the user know that at any point they can invoke `party-mode` for multi-agent perspectives or `advanced-elicitation` for deeper exploration on a specific section. Then scan for misroute on the first message: if the signal points elsewhere (game → BMad GDS; express build → `bmad-quick-dev`; one-pager → `product-brief`; vet product idea → `prfaq`; agent skill or custom agent → `bmad-workflow-builder`), suggest they might want the other options before continuing.
 5. Detect intent: **Create** (no PRD), **Update** (existing PRD), **Validate** (critique only). If ambiguous, ask. For Create intent, before binding a fresh workspace, scan `{workflow.prd_output_path}` for prior in-progress runs (folders matching `{workflow.run_folder_pattern}` whose `prd.md` frontmatter `status` is not `final`); if any exist, offer to resume rather than starting over.
 6. Run `{workflow.activation_steps_append}`.
 
@@ -96,5 +83,5 @@ Tell the user the sequence in one sentence, then walk it. Polish goes last so it
 4. **Triage open items.** All Open Questions, `[ASSUMPTION]` tags, `[NOTE FOR PM]` callouts. Phase-blockers (would make the PRD unsafe for UX/architecture/epics) surfaced one at a time and resolved; non-blockers deferred with owner + revisit condition logged to `.decision-log.md`. If phase-blocker count is high, flag it.
 5. **Polish.** Apply `{workflow.doc_standards}` to `prd.md` and `addendum.md` in declared order (structural passes before prose — prose should not polish soon-to-be-cut text). Parallelize across documents, sequential within.
 6. **External handoffs.** Execute `{workflow.external_handoffs}`; surface returned URLs/IDs. Skip and flag unavailable tools.
-7. **Close.** Set `prd.md` frontmatter `status: final` and `updated` to `{date}` so future invocations distinguish this PRD from in-progress drafts. Record finalization to `.decision-log.md`. Share artifact paths. Common next: `bmad-create-ux-design`, `bmad-create-architecture`, `bmad-create-epics-and-stories`; invoke `bmad-help` for authoritative routing.
+7. **Close.** Set `prd.md` frontmatter `status: final` and `updated` to `{date}` so future invocations distinguish this PRD from in-progress drafts. Record finalization to `.decision-log.md`. Share artifact paths. Common next: `create-ux-design`, `create-architecture`, `create-epics-and-stories`; invoke `stellar-help` for authoritative routing.
 8. Run `{workflow.on_complete}` if non-empty.

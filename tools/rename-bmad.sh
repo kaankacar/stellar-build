@@ -125,6 +125,51 @@ find "$DEST" -type f \( -name "SKILL.md" -o -name "customize.toml" -o -name "*.m
   -exec perl -i -pe "s|_bmad/|.stellar-build/|g" {} \;
 echo "  ✓ All _bmad/ path references rewritten"
 
+# --- Step 3c: Cross-reference skill renames (bmad-X → renamed) ---
+# Skills frequently mention other skills by name in their body text
+# ("invoke `bmad-help`", "next: bmad-create-architecture"). After we
+# renamed the folders, these in-body references became broken — they
+# point to skill names that no longer exist. Map each old name to its
+# new equivalent.
+echo ""
+echo "→ Rewriting cross-references to renamed skills"
+
+# Mapping: old bmad name → new name (for skills we bundle)
+SKILL_RENAMES=(
+  "bmad-help|stellar-help"
+  "bmad-party-mode|party-mode"
+  "bmad-brainstorming|brainstorming"
+  "bmad-advanced-elicitation|advanced-elicitation"
+  "bmad-review-edge-case-hunter|review-edge-case-hunter"
+  "bmad-review-adversarial-general|review-edge-case-hunter"
+  "bmad-create-ux-design|create-ux-design"
+  "bmad-create-architecture|create-architecture"
+  "bmad-create-epics-and-stories|create-epics-and-stories"
+  "bmad-product-brief|product-brief"
+  "bmad-prfaq|prfaq"
+  "bmad-prd|prd"
+  "bmad-create-prd|prd"
+  "bmad-edit-prd|prd"
+  "bmad-validate-prd|prd"
+  "bmad-agent-pm|nicole-pm"
+  "bmad-agent-analyst|justin-analyst"
+  "bmad-agent-tech-writer|bri-tech-writer"
+  "bmad-agent-ux-designer|kaan-ux-designer"
+  "bmad-agent-architect|tyler-architect"
+  "bmad-agent-dev|elliot-dev"
+  "bmad-dev-story|dev-story"
+  "bmad-investigate|investigate"
+  "bmad-code-review|code-review"
+)
+
+for entry in "${SKILL_RENAMES[@]}"; do
+  old="${entry%|*}"
+  new="${entry#*|}"
+  find "$DEST" -type f \( -name "SKILL.md" -o -name "customize.toml" -o -name "*.md" \) \
+    -exec perl -i -pe "s|${old}|${new}|g" {} \;
+done
+echo "  ✓ ${#SKILL_RENAMES[@]} skill cross-references rewritten"
+
 # --- Step 4: Sanity verification ---
 echo ""
 echo "→ Verifying"

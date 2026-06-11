@@ -19,19 +19,6 @@ The PRFAQ forces customer-first clarity: write the press release announcing the 
 
 **Research-grounded.** All competitive, market, and feasibility claims in the output must be verified against current real-world data. Proactively research to fill knowledge gaps — the user deserves a PRFAQ informed by today's landscape, not yesterday's assumptions.
 
-## Pre-flight market signal check
-
-Before writing the press release, scan the bundled investor-thesis catalogs to ground the "Why now / why this customer" claims:
-
-- `~/.claude/skills/data/ideas/a16z-big-ideas-2025.json` — a16z's "big ideas" thesis for 2025
-- `~/.claude/skills/data/ideas/yc-requests-for-startups.json` — what YC explicitly wants funded
-- `~/.claude/skills/data/ideas/a16z-state-of-crypto-2025.json` — current crypto landscape facts
-- `~/.claude/skills/data/ideas/alliance-ideas.json` — Alliance DAO's published thesis areas
-
-A PRFAQ that aligns with both customer pain AND current investor thesis is twice as strong. If the idea hits no thesis at all, surface that honestly during stress-testing — it doesn't kill the idea, but it does shift the funding story.
-
-For Stellar-specific projects, also consult `~/.claude/skills/data/lumenloop/projects.json` and `~/.claude/skills/data/lumenloop/scf/rounds.json` to check what's already shipped and what SCF historically funds.
-
 ## Conventions
 
 - Bare paths (e.g. `references/press-release.md`) resolve from the skill root.
@@ -120,7 +107,7 @@ When the user gets stuck, offer concrete suggestions based on what they've share
 
 **Fast-track:** If the user provides all four essentials in their opening message (or via structured input), acknowledge and confirm understanding, then move directly to document creation and Stage 2 without extended discovery.
 
-**Graceful redirect:** If after 2-3 exchanges the user can't articulate a customer or problem, don't force it — suggest the idea may need more exploration first and recommend they invoke the `bmad-brainstorming` skill to develop it further.
+**Graceful redirect:** If after 2-3 exchanges the user can't articulate a customer or problem, don't force it — suggest the idea may need more exploration first and recommend they invoke the `brainstorming` skill to develop it further.
 
 **Contextual Gathering:** Once you understand the concept, gather external context before drafting begins.
 

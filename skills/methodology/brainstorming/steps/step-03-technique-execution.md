@@ -305,7 +305,7 @@ After final technique element:
 #### If 'K', 'T', 'A', or 'B' (Continue Exploring):
 
 - **Stay in Step 3** and restart the facilitation loop for the chosen path (or pause if break requested).
-- For option A: Invoke the `bmad-advanced-elicitation` skill
+- For option A: Invoke the `advanced-elicitation` skill
 
 ### 9. Update Documentation
 

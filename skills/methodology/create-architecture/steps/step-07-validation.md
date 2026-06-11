@@ -32,8 +32,8 @@ This step will generate content and present choices:
 
 ## PROTOCOL INTEGRATION:
 
-- When 'A' selected: Invoke the `bmad-advanced-elicitation` skill
-- When 'P' selected: Invoke the `bmad-party-mode` skill
+- When 'A' selected: Invoke the `advanced-elicitation` skill
+- When 'P' selected: Invoke the `party-mode` skill
 - PROTOCOLS always return to display this step's A/P/C menu after the A or P have completed
 - User accepts/rejects protocol changes before proceeding
 
@@ -307,7 +307,7 @@ Show the validation results and present choices:
 
 #### If 'A' (Advanced Elicitation):
 
-- Invoke the `bmad-advanced-elicitation` skill with validation issues
+- Invoke the `advanced-elicitation` skill with validation issues
 - Process enhanced solutions for complex concerns
 - Ask user: "Accept these architectural improvements? (y/n)"
 - If yes: Update content, then return to A/P/C menu
@@ -315,7 +315,7 @@ Show the validation results and present choices:
 
 #### If 'P' (Party Mode):
 
-- Invoke the `bmad-party-mode` skill with validation context
+- Invoke the `party-mode` skill with validation context
 - Process collaborative insights on implementation readiness
 - Ask user: "Accept these changes to the validation results? (y/n)"
 - If yes: Update content, then return to A/P/C menu
