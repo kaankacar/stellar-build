@@ -72,7 +72,7 @@ skill = "justin-analyst"
 [[agent.menu]]
 code = "TR"
 description = "Technical feasibility, architecture options and implementation approaches"
-skill = "bmad-technical-research"
+skill = "justin-analyst"
 
 [[agent.menu]]
 code = "CB"

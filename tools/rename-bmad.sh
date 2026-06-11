@@ -173,6 +173,11 @@ SKILL_RENAMES=(
   "bmad-editorial-review-prose|review-edge-case-hunter"
   "bmad-editorial-review-structure|review-edge-case-hunter"
   "bmad-generate-project-context|justin-analyst"
+  "bmad-qa-generate-e2e-tests|code-review"
+  "bmad-sprint-planning|create-epics-and-stories"
+  "bmad-retrospective|code-review"
+  "bmad-workflow-builder|nicole-pm"
+  "bmad-technical-research|justin-analyst"
 )
 
 for entry in "${SKILL_RENAMES[@]}"; do
