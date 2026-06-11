@@ -16,7 +16,7 @@ When asked for market research, competitive analysis, or sizing the opportunity 
 **Stellar ecosystem:**
 - `~/.claude/skills/data/lumenloop/projects.json` — 728 Stellar projects (categories, SCF history, audits, tokens)
 - `~/.claude/skills/data/lumenloop/scf/rounds.json` — historical SCF funding patterns by round and category
-- `~/.claude/skills/data/electric-capital/stellar-repos.json` — ~9000 Stellar repos (developer activity signal)
+- `~/.claude/skills/data/electric-capital/stellar-repos.json` — ~9000 Stellar repos (developer activity signal). Use it for: (a) **developer concentration analysis** — which orgs have multiple Stellar repos? (b) **emerging-player detection** — orgs with serious activity but not yet in the LumenLoop catalog. (c) **bootcamp filter** — exclude `whitebelt`/`orangebelt`/`yellowbelt`/`greenbelt`/`redbelt` repos and student-tutorial forks to get the true builder population. Cross-reference with the LumenLoop catalog to spot documented vs stealth builders in the user's domain.
 
 **Broader crypto market:**
 - `~/.claude/skills/data/ideas/a16z-big-ideas-2025.json` — a16z's "big ideas" thesis for 2025

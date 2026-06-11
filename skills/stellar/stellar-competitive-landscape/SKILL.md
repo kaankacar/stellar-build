@@ -22,6 +22,21 @@ Filter by:
 
 Return top 10-15 matches ranked by relevance score.
 
+### 2.5 Mine Electric Capital for what LumenLoop doesn't show
+
+`~/.claude/skills/data/electric-capital/stellar-repos.json` has ~9000 repos tagged as Stellar — a much wider net than LumenLoop's curated 728. Use it to surface what LumenLoop misses:
+
+- **Emerging players**: GitHub orgs with 2+ Stellar repos that aren't in LumenLoop yet (proto-projects, soon-to-launch)
+- **Dormant competitors**: repos whose names match the user's keywords but show no recent activity (these were attempts that didn't ship — useful signal about why the category might be hard)
+- **Cluster detection**: if 5+ different orgs are working on the user's exact keyword (e.g., "perps", "vault", "wallet"), the space has more friction than LumenLoop suggests
+
+Filter out noise:
+- Repos with `whitebelt`, `orangebelt`, `yellowbelt`, `greenbelt`, `redbelt` in the name (Stellar's tiered training program)
+- Forks of `stellar/*` official repos with no meaningful divergence
+- Student/tutorial repos (`-tutorial`, `-exercise`, `-demo` suffixes)
+
+The cleaned signal vs LumenLoop catalog gives you the real picture: who's documented, who's stealth-building, who tried and abandoned.
+
 ### 3. Enrich with developer activity
 
 For each top match, look up its GitHub org/repo in `~/.claude/skills/data/electric-capital/stellar-repos.jsonl`. Note: last-commit recency, total contributors if available. Flag dormant repos (no commits in 6+ months) as "low activity."

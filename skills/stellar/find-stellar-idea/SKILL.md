@@ -13,7 +13,7 @@ Read both Stellar-specific data and broader crypto market signals. The combinati
 
 **Stellar-specific:**
 - `~/.claude/skills/data/lumenloop/projects.json` — 728-project Stellar ecosystem catalog with categories, SCF funding history, GitHub links
-- `~/.claude/skills/data/electric-capital/stellar-repos.json` — Stellar developer activity signal (~9000 repos)
+- `~/.claude/skills/data/electric-capital/stellar-repos.json` — Stellar developer activity signal (~9000 repos). Use it to detect **ecosystem velocity**: count repos created or actively maintained in each category, identify orgs with multiple Stellar repos (likely serious builders), filter out bootcamp exercises (`whitebelt`, `orangebelt`, `yellowbelt` in the repo name) and student forks to get a clean signal of who's actually shipping. If the user picks a domain where velocity is high but LumenLoop catalog coverage is low, that's a "builders are here but undocumented" signal — strong place to enter.
 - `~/.claude/skills/data/lumenloop/scf/rounds.json` — historical SCF funding patterns (categories funded, average grant size)
 
 **Broader crypto market signals:**

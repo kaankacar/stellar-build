@@ -36,6 +36,17 @@ Load `~/.claude/skills/data/lumenloop/projects.json` (or fetch from `https://raw
 
 For each submission team, check if any team's project is already in the LumenLoop DB. If yes, flag them as **repeat builder** with their past SCF rounds and total prior funding.
 
+### 4.5 Cross-reference Stellar dev history (Electric Capital)
+
+Load `~/.claude/skills/data/electric-capital/stellar-repos.json` (~9000 repos). For each submission's GitHub org/user (extracted from team links on `/project/<rec-id>`), count how many Stellar-tagged repos that org has.
+
+Bucket:
+- **Stellar veteran**: org has 5+ Stellar repos in Electric Capital → likely a serious builder
+- **First Stellar project**: 0-1 Stellar repos → fresh to the ecosystem (positive: new blood; risk: less Stellar-native context)
+- **Bootcamp graduate**: repos are mostly `whitebelt`/`orangebelt`/etc → graduated Stellar's training program, applying directly after
+
+This often reveals more than the LumenLoop check alone, because LumenLoop only catalogs projects with SCF history; many serious builders have GitHub activity but no funded project yet.
+
 ### 5. Summarize for the user
 
 Format as:
