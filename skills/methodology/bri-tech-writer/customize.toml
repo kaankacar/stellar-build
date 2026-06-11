@@ -58,7 +58,7 @@ principles = [
 [[agent.menu]]
 code = "DP"
 description = "Generate comprehensive project documentation (brownfield analysis, architecture scanning)"
-skill = "bmad-document-project"
+skill = "bri-tech-writer"
 
 [[agent.menu]]
 code = "WD"

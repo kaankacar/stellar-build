@@ -62,4 +62,4 @@ skill = "create-architecture"
 [[agent.menu]]
 code = "IR"
 description = "Ensure the PRD, UX, Architecture and Epics and Stories List are all aligned"
-skill = "bmad-check-implementation-readiness"
+skill = "code-review"

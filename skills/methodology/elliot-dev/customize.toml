@@ -62,7 +62,7 @@ skill = "dev-story"
 [[agent.menu]]
 code = "QD"
 description = "Unified quick flow — clarify intent, plan, implement, review, present"
-skill = "bmad-quick-dev"
+skill = "dev-story"
 
 [[agent.menu]]
 code = "QA"
@@ -82,7 +82,7 @@ skill = "bmad-sprint-planning"
 [[agent.menu]]
 code = "CS"
 description = "Prepare a story with all required context for implementation"
-skill = "bmad-create-story"
+skill = "create-epics-and-stories"
 
 [[agent.menu]]
 code = "ER"

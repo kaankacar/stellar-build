@@ -160,6 +160,19 @@ SKILL_RENAMES=(
   "bmad-dev-story|dev-story"
   "bmad-investigate|investigate"
   "bmad-code-review|code-review"
+  # Loose mappings: skills we deliberately excluded from the curated set,
+  # redirected to the closest available skill so menu items + inline
+  # references resolve to something that exists rather than 404-ing.
+  "bmad-check-implementation-readiness|code-review"
+  "bmad-correct-course|dev-story"
+  "bmad-document-project|bri-tech-writer"
+  "bmad-quick-dev|dev-story"
+  "bmad-create-story|create-epics-and-stories"
+  "bmad-market-research|justin-analyst"
+  "bmad-domain-research|justin-analyst"
+  "bmad-editorial-review-prose|review-edge-case-hunter"
+  "bmad-editorial-review-structure|review-edge-case-hunter"
+  "bmad-generate-project-context|justin-analyst"
 )
 
 for entry in "${SKILL_RENAMES[@]}"; do

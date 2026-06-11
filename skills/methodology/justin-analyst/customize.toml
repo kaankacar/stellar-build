@@ -62,12 +62,12 @@ skill = "brainstorming"
 [[agent.menu]]
 code = "MR"
 description = "Market analysis, competitive landscape, customer needs and trends"
-skill = "bmad-market-research"
+skill = "justin-analyst"
 
 [[agent.menu]]
 code = "DR"
 description = "Industry domain deep dive, subject matter expertise and terminology"
-skill = "bmad-domain-research"
+skill = "justin-analyst"
 
 [[agent.menu]]
 code = "TR"
@@ -87,4 +87,4 @@ skill = "prfaq"
 [[agent.menu]]
 code = "DP"
 description = "Analyze an existing project to produce documentation for human and LLM consumption"
-skill = "bmad-document-project"
+skill = "bri-tech-writer"

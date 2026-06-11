@@ -67,9 +67,9 @@ skill = "create-epics-and-stories"
 [[agent.menu]]
 code = "IR"
 description = "Ensure the PRD, UX, Architecture and Epics and Stories List are all aligned"
-skill = "bmad-check-implementation-readiness"
+skill = "code-review"
 
 [[agent.menu]]
 code = "CC"
 description = "Determine how to proceed if major need for change is discovered mid implementation"
-skill = "bmad-correct-course"
+skill = "dev-story"
