@@ -10,17 +10,20 @@ curl -fsSL https://raw.githubusercontent.com/kaankacar/stellar-build/main/instal
 
 **42 skills across the full journey:**
 
-- **Idea phase.** Discover what to build on Stellar, validate against the 728-project ecosystem, watch the live SCF round.
+- **Idea phase.** Discover what to build on Stellar, validate against the 728-project ecosystem and ~9000-repo developer activity signal, cross-reference with broader investor thesis (a16z, YC, Alliance DAO), and watch the live SCF round.
 - **Planning phase.** PRD, UX design, and product brief, driven by personas from the SDF DevRel team.
 - **Solutioning phase.** Architecture, epics, stories, plus deep Soroban + dapp + asset knowledge from `stellar/stellar-dev-skill`.
 - **Implementation phase.** Story-driven dev, code review, and debugging.
 - **Launch phase.** Devnet to mainnet deploy plus 10 SCF grant lifecycle skills.
 
-**Curated data:**
+**Curated data layer:**
 
 - The full LumenLoop ecosystem catalog (728 projects, SCF rounds, audits, tokens)
-- Electric Capital's Stellar developer taxonomy (9,027 catalogued repos)
+- Electric Capital's Stellar developer taxonomy (9,027 catalogued repos, with bootcamp-noise filtering instructions baked into the skills)
 - Stellar Foundation's ecosystem-resources reference docs
+- Broader crypto market thesis catalogs: a16z Big Ideas 2025, a16z State of Crypto 2025, YC Requests for Startups, every YC-backed crypto company, Alliance DAO published ideas
+
+Skills that do market or competitive work (Justin the analyst, Nicole the PM, the PRFAQ + PRD + product-brief flows, the find/landscape/SCF-round skills) all read from this data layer for grounded, evidence-based recommendations.
 
 ## Meet your team
 
@@ -117,10 +120,9 @@ draft my SCF submission        → scf-submission-drafter
 
 The install pulls from four canonical sources at install time:
 
-1. **This repo** (`kaankacar/stellar-build`). 20 paraphrased BMAD methodology skills plus 5 new Stellar-specific skills plus the installer plus bundled data.
+1. **This repo** (`kaankacar/stellar-build`). 20 paraphrased BMAD methodology skills, 5 new Stellar-specific skills, the installer, plus the bundled data layer: LumenLoop's 728-project ecosystem catalog (converted to JSON at build time), Electric Capital's 9,027-repo Stellar taxonomy, and the broader market thesis catalogs (a16z Big Ideas, a16z State of Crypto, YC Requests for Startups, YC crypto companies, Alliance DAO ideas).
 2. **`lumenloop/awesome-stellar-community-fund`.** 10 SCF lifecycle skills.
 3. **`stellar/stellar-dev-skill`.** 7 Stellar dev knowledge modules (Soroban, dapp, assets, data, agentic-payments, zk-proofs, standards).
-4. **`lumenloop/stellar-ecosystem-db`.** Bundled snapshot of the 728-project YAML catalog, converted to JSON at build time.
 
 We don't redistribute upstream content from sources 2-3. Instead, the installer points your machine at the canonical sources. See [NOTICES.md](./NOTICES.md) for attribution and licenses.
 
