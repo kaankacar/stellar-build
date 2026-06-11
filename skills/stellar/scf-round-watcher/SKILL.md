@@ -61,6 +61,14 @@ Deadline: <DATE> (<X days remaining>)
 <2-3 sentences on what categories or themes are dominant>
 ```
 
+### 5.5 Optional: thesis-alignment flagging
+
+For each active submission, optionally cross-reference with:
+- `~/.claude/skills/data/ideas/a16z-big-ideas-2025.json` — does this submission ride an a16z 2025 thesis (RWA, agentic payments, prediction markets, etc.)?
+- `~/.claude/skills/data/ideas/yc-requests-for-startups.json` — does YC explicitly want something in this category?
+
+Submissions that hit BOTH Stellar ecosystem-fit AND broader investor thesis are 2x more likely to win the round. Flag them as "thesis-aligned" in the summary table.
+
 ### 6. Close with next-step suggestions
 
 If user is considering applying:
