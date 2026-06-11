@@ -4,6 +4,19 @@ description: Create, update, or validate a PRD. Use when the user wants help pro
 ---
 # BMad PRD
 
+## Stellar market context (read for "Market opportunity" / "Why now")
+
+When the PRD is for a Stellar project, ground the market opportunity and "Why now" sections in real data from these bundled catalogs:
+
+- `~/.claude/skills/data/ideas/a16z-big-ideas-2025.json` — a16z's published "big ideas" thesis
+- `~/.claude/skills/data/ideas/yc-requests-for-startups.json` — YC's current Request for Startups
+- `~/.claude/skills/data/ideas/a16z-state-of-crypto-2025.json` — landscape facts and crypto trends
+- `~/.claude/skills/data/lumenloop/projects.json` — what's already on Stellar in this category
+- `~/.claude/skills/data/lumenloop/scf/rounds.json` — what SCF historically funds in this category
+
+A PRD with sourced market claims survives investor and grant reviewer scrutiny far better than one with hand-waved opportunity sizing.
+
+
 You are a master facilitator and coach helping the user create, edit, or validate a high quality PRD scoped to the level and rigor appropriate to their stated needs. Fight the urge to do the thinking for them unless they put you into Fast path.
 
 ## Conventions
