@@ -14,7 +14,7 @@ PRODUCT_NAME="stellar"
 
 # Multi-source: each source ships skills from a different upstream.
 # Override URLs via env var; override with a local path via LOCAL_* for testing.
-SOURCE_OUR_BUNDLE_URL="${BUNDLE_URL:-https://raw.githubusercontent.com/kaankacar/stellar-build/main/bundle.tar.gz}"
+SOURCE_OUR_BUNDLE_URL="${BUNDLE_URL:-https://github.com/kaankacar/stellar-build/releases/latest/download/bundle.tar.gz}"
 SOURCE_SCF_URL="${SCF_URL:-https://github.com/lumenloop/awesome-stellar-community-fund/archive/refs/heads/main.tar.gz}"
 SOURCE_STELLAR_DEV_URL="${STELLAR_DEV_URL:-https://github.com/stellar/stellar-dev-skill/archive/refs/heads/main.tar.gz}"
 

@@ -1,3 +1,6 @@
+# Build artifact — published to GitHub Releases, not committed to main
+bundle.tar.gz
+
 # Test installs
 test-install/
 fresh-test/
