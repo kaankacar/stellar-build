@@ -109,12 +109,6 @@ EOF
 
   rm -rf "$CONFIG_DIR"
   ok "Removed $REMOVED skills and config"
-
-  # Anonymous uninstall counter
-  if [ -z "${STELLAR_BUILD_NO_TELEMETRY:-}" ] && has_cmd curl; then
-    curl -fsSL "https://api.countapi.xyz/hit/kaankacar.stellar-build/uninstall" >/dev/null 2>&1 &
-  fi
-
   printf "\n  %sTo reinstall: ./install.sh%s\n\n" "$DIM" "$RESET"
   exit 0
 fi
@@ -382,13 +376,13 @@ else
   printf "  %s%sSetup complete!%s\n\n" "$GREEN" "$BOLD" "$RESET"
 fi
 
-# Anonymous install counter (CountAPI).
+# Anonymous install counter (Abacus, CountAPI's successor).
 # No identity, no IP collection on our side — just a single counter increment
 # so the maintainer can see rough usage. Opt out: STELLAR_BUILD_NO_TELEMETRY=1
 if [ -z "${STELLAR_BUILD_NO_TELEMETRY:-}" ] && has_cmd curl; then
   event="install"
   [ "$UPDATE_MODE" = true ] && event="update"
-  curl -fsSL "https://api.countapi.xyz/hit/kaankacar.stellar-build/${event}" >/dev/null 2>&1 &
+  curl -fsSL "https://abacus.jasoncameron.dev/hit/kaankacar.stellar-build/${event}" >/dev/null 2>&1 &
 fi
 
 # Git-repo hint for project-local installs.
