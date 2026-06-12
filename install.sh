@@ -14,7 +14,7 @@ PRODUCT_NAME="stellar"
 
 # Multi-source: each source ships skills from a different upstream.
 # Override URLs via env var; override with a local path via LOCAL_* for testing.
-SOURCE_OUR_BUNDLE_URL="${BUNDLE_URL:-https://github.com/kaankacar/stellar-build/releases/latest/download/bundle.tar.gz}"
+SOURCE_OUR_BUNDLE_URL="${BUNDLE_URL:-https://raw.githubusercontent.com/kaankacar/stellar-build/main/bundle.tar.gz}"
 SOURCE_SCF_URL="${SCF_URL:-https://github.com/lumenloop/awesome-stellar-community-fund/archive/refs/heads/main.tar.gz}"
 SOURCE_STELLAR_DEV_URL="${STELLAR_DEV_URL:-https://github.com/stellar/stellar-dev-skill/archive/refs/heads/main.tar.gz}"
 
@@ -109,6 +109,12 @@ EOF
 
   rm -rf "$CONFIG_DIR"
   ok "Removed $REMOVED skills and config"
+
+  # Anonymous uninstall counter
+  if [ -z "${STELLAR_BUILD_NO_TELEMETRY:-}" ] && has_cmd curl; then
+    curl -fsSL "https://api.countapi.xyz/hit/kaankacar.stellar-build/uninstall" >/dev/null 2>&1 &
+  fi
+
   printf "\n  %sTo reinstall: ./install.sh%s\n\n" "$DIM" "$RESET"
   exit 0
 fi
@@ -374,6 +380,15 @@ if [ "$UPDATE_MODE" = true ]; then
   printf "  %s%sUpdate complete!%s %s%s skills updated.%s\n\n" "$GREEN" "$BOLD" "$RESET" "$DIM" "$SKILL_COUNT" "$RESET"
 else
   printf "  %s%sSetup complete!%s\n\n" "$GREEN" "$BOLD" "$RESET"
+fi
+
+# Anonymous install counter (CountAPI).
+# No identity, no IP collection on our side — just a single counter increment
+# so the maintainer can see rough usage. Opt out: STELLAR_BUILD_NO_TELEMETRY=1
+if [ -z "${STELLAR_BUILD_NO_TELEMETRY:-}" ] && has_cmd curl; then
+  event="install"
+  [ "$UPDATE_MODE" = true ] && event="update"
+  curl -fsSL "https://api.countapi.xyz/hit/kaankacar.stellar-build/${event}" >/dev/null 2>&1 &
 fi
 
 # Git-repo hint for project-local installs.

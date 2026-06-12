@@ -1,6 +1,6 @@
 # stellar-build
 
-![Downloads](https://img.shields.io/github/downloads/kaankacar/stellar-build/total) ![Latest Release](https://img.shields.io/github/v/release/kaankacar/stellar-build)
+![Installs](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.countapi.xyz%2Fget%2Fkaankacar.stellar-build%2Finstall&query=%24.value&label=installs&color=blue)
 
 A one-command install that drops an end-to-end Stellar development journey into your Claude Code and OpenAI Codex CLI setup. From "what should I build?" to mainnet deploy and Stellar Community Fund grant submission, in 42 skills plus curated ecosystem data.
 
