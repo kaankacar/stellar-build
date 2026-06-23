@@ -91,8 +91,12 @@ EOF
 $(read_manifest_array sharedPaths)
 EOF
 
-  # Revert Claude Code permissions
-  PERMS_TO_REMOVE=$(read_manifest_array permissionsAdded | tr '\n' ',' | sed 's/,$//')
+  # Revert Claude Code permissions.
+  # NB: trailing `|| true` is required — read_manifest_array's internal grep
+  # exits non-zero when permissionsAdded is empty (e.g. after an --update,
+  # which records []), and under `set -o pipefail` that would otherwise abort
+  # the entire uninstall before the hook + config cleanup below ever runs.
+  PERMS_TO_REMOVE=$(read_manifest_array permissionsAdded | tr '\n' ',' | sed 's/,$//' || true)
   if [ -n "$PERMS_TO_REMOVE" ] && [ -f "$CLAUDE_SETTINGS" ] && has_cmd node; then
     node -e "
       const fs = require('fs');
@@ -105,6 +109,39 @@ EOF
       }
       fs.writeFileSync('$CLAUDE_SETTINGS', JSON.stringify(c, null, 2));
     " 2>/dev/null && ok "Reverted Claude Code permissions" || warn "Could not revert Claude settings"
+  fi
+
+  # Remove the learning-loop trace hook from Claude settings.
+  # Strip every learning-loop hook (trace / prompt-capture / session-start) from
+  # both Claude settings.json and Codex hooks.json. We match by the hooks dir
+  # marker, so all three events are cleaned regardless of how they're nested.
+  HOOKS_MARKER="$CONFIG_DIR/hooks/"
+  clean_loop_hooks() {  # $1 = json file
+    local f="$1"
+    [ -f "$f" ] || return 0
+    node -e '
+      const fs = require("fs");
+      const [file, marker] = process.argv.slice(1);
+      const c = JSON.parse(fs.readFileSync(file, "utf8") || "{}");
+      if (c.hooks && typeof c.hooks === "object") {
+        for (const ev of Object.keys(c.hooks)) {
+          if (!Array.isArray(c.hooks[ev])) continue;
+          c.hooks[ev] = c.hooks[ev]
+            .map(g => (g && Array.isArray(g.hooks))
+              ? { ...g, hooks: g.hooks.filter(h => !(h && typeof h.command === "string" && h.command.includes(marker))) }
+              : g)
+            .filter(g => !(g && Array.isArray(g.hooks) && g.hooks.length === 0));
+          if (c.hooks[ev].length === 0) delete c.hooks[ev];
+        }
+        if (Object.keys(c.hooks).length === 0) delete c.hooks;
+      }
+      fs.writeFileSync(file, JSON.stringify(c, null, 2));
+    ' "$f" "$HOOKS_MARKER" 2>/dev/null
+  }
+  if has_cmd node; then
+    clean_loop_hooks "$CLAUDE_SETTINGS" && ok "Removed learning-loop hooks from Claude settings" \
+      || warn "Could not clean Claude hooks"
+    clean_loop_hooks "$PREFIX/.codex/hooks.json" && ok "Removed learning-loop hooks from Codex"
   fi
 
   rm -rf "$CONFIG_DIR"
@@ -228,6 +265,19 @@ if [ -d "$OUR_SRC/skills" ]; then
     cp -Rf "$OUR_SRC/skills/data/"* "$CLAUDE_SKILLS/data/" 2>/dev/null || true
     cp -Rf "$OUR_SRC/skills/data/"* "$CODEX_SKILLS/data/" 2>/dev/null || true
   fi
+
+  # Learning loop — the trace hook and CLI live outside the skills dir, under
+  # the config dir (~/.stellar). The skill folders themselves (learning-loop,
+  # optimize-skills, bench-skills) install via the folder-skill loop above.
+  mkdir -p "$CONFIG_DIR/traces" "$CONFIG_DIR/backups" "$CONFIG_DIR/bench" "$CONFIG_DIR/hooks" "$CONFIG_DIR/bin"
+  if [ -d "$OUR_SRC/skills/loop/hooks" ]; then
+    cp -f "$OUR_SRC/skills/loop/hooks/"* "$CONFIG_DIR/hooks/" 2>/dev/null || true
+    chmod +x "$CONFIG_DIR/hooks/"*.sh 2>/dev/null || true
+  fi
+  if [ -d "$OUR_SRC/skills/loop/bin" ]; then
+    cp -f "$OUR_SRC/skills/loop/bin/"* "$CONFIG_DIR/bin/" 2>/dev/null || true
+    chmod +x "$CONFIG_DIR/bin/"* 2>/dev/null || true
+  fi
 fi
 
 # 2. SCF — flat .md files. GitHub tarballs extract with a "<repo>-<branch>" top dir.
@@ -289,6 +339,60 @@ elif [ ! -f "$CLAUDE_SETTINGS" ]; then
   ok "Created $CLAUDE_SETTINGS"
 fi
 
+# --- Learning loop: register hooks (Claude Code + Codex) ---
+# Three hooks make the loop automatic and high-signal:
+#   PostToolUse       -> trace-skill.sh        (capture every skill invocation)
+#   UserPromptSubmit  -> capture-prompt.sh     (pair the prompt with the skill)
+#   SessionStart      -> loop-session-start.sh (self-trigger: nudge / auto-optimize)
+# Claude Code reads ~/.claude/settings.json; Codex reads ~/.codex/hooks.json —
+# both share the same hook schema, so one merge routine serves both. Idempotent:
+# re-running install (or --update) never adds duplicates.
+HOOKS_DIR="$CONFIG_DIR/hooks"
+HOOK_CMD="$HOOKS_DIR/trace-skill.sh"   # recorded in the manifest as the loop marker
+CODEX_HOOKS="$PREFIX/.codex/hooks.json"
+
+register_loop_hooks() {  # $1 = target json file, $2 = agent (claude|codex)
+  local target="$1" agent="$2"
+  [ -f "$target" ] || { mkdir -p "$(dirname "$target")"; printf '{}\n' > "$target"; }
+  node -e '
+    const fs = require("fs");
+    const [file, hooksDir, agent] = process.argv.slice(1);
+    const c = JSON.parse(fs.readFileSync(file, "utf8") || "{}");
+    c.hooks = c.hooks || {};
+    // Codex fires PostToolUse for every tool call (its skill tool name is not
+    // guaranteed), so match all and let the wrapper self-filter to skills.
+    // Claude Code scopes the matcher to the Skill tool directly.
+    const traceCmd = agent === "codex"
+      ? `STELLAR_TRACE_AGENT=codex ${hooksDir}/trace-skill.sh`
+      : `${hooksDir}/trace-skill.sh`;
+    const specs = [
+      { event: "PostToolUse",      matcher: agent === "codex" ? ".*" : "Skill", cmd: traceCmd },
+      { event: "UserPromptSubmit", matcher: "",                                 cmd: `${hooksDir}/capture-prompt.sh` },
+      { event: "UserPromptSubmit", matcher: "",                                 cmd: `${hooksDir}/reprompt.sh` },
+      { event: "SessionStart",     matcher: "",                                 cmd: `${hooksDir}/loop-session-start.sh` },
+    ];
+    for (const s of specs) {
+      c.hooks[s.event] = Array.isArray(c.hooks[s.event]) ? c.hooks[s.event] : [];
+      const exists = c.hooks[s.event].some(g =>
+        Array.isArray(g.hooks) && g.hooks.some(h => h && h.command === s.cmd));
+      if (!exists) c.hooks[s.event].push({ matcher: s.matcher, hooks: [{ type: "command", command: s.cmd }] });
+    }
+    fs.writeFileSync(file, JSON.stringify(c, null, 2));
+  ' "$target" "$HOOKS_DIR" "$agent"
+}
+
+if [ -f "$HOOK_CMD" ] && has_cmd node; then
+  [ -f "$CLAUDE_SETTINGS" ] || { mkdir -p "$(dirname "$CLAUDE_SETTINGS")"; printf '{}\n' > "$CLAUDE_SETTINGS"; }
+  register_loop_hooks "$CLAUDE_SETTINGS" claude 2>/dev/null \
+    && ok "Learning loop: trace capture + auto-tune enabled for Claude Code (local only)" \
+    || warn "Could not register Claude hooks — skills still work, tracing stays off"
+  if register_loop_hooks "$CODEX_HOOKS" codex 2>/dev/null; then
+    ok "Learning loop: trace capture enabled for Codex (~/.codex/hooks.json)"
+  fi
+elif ! has_cmd node; then
+  warn "node not found — trace capture disabled (optimize/bench still work on existing traces)"
+fi
+
 # --- Manifest ---
 SKILL_PATHS_JSON=""
 for s in $FOLDER_SKILLS; do
@@ -305,7 +409,7 @@ if [ -n "$PERMS_ADDED" ]; then
 fi
 
 cat > "$MANIFEST_FILE" <<MANIFEST
-{"installedBy":"$PRODUCT_NAME","installedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","prefix":"$PREFIX","skillPaths":[$SKILL_PATHS_JSON],"sharedPaths":["$CLAUDE_SKILLS/data","$CLAUDE_SKILLS/SKILL_ROUTER.md","$CODEX_SKILLS/data","$CODEX_SKILLS/SKILL_ROUTER.md"],"permissionsAdded":[$PERMS_JSON],"settingsFile":"$CLAUDE_SETTINGS"}
+{"installedBy":"$PRODUCT_NAME","installedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","prefix":"$PREFIX","skillPaths":[$SKILL_PATHS_JSON],"sharedPaths":["$CLAUDE_SKILLS/data","$CLAUDE_SKILLS/SKILL_ROUTER.md","$CODEX_SKILLS/data","$CODEX_SKILLS/SKILL_ROUTER.md"],"permissionsAdded":[$PERMS_JSON],"traceHook":"$HOOK_CMD","hooksDir":"$HOOKS_DIR","codexHooks":"$CODEX_HOOKS","settingsFile":"$CLAUDE_SETTINGS"}
 MANIFEST
 ok "Wrote manifest to $MANIFEST_FILE"
 
@@ -361,6 +465,16 @@ _welcome_card() {
   printf "  ${G}→${R}  ${C}\"talk to Tyler\"${R}\n"
   printf "  ${G}→${R}  ${C}/stellar-help${R}                ${D}← if you get lost${R}\n"
   printf "  ${G}→${R}  ${C}/navigate-skills${R}             ${D}← see all ${SKILL_COUNT} skills${R}\n"
+  printf "  ${G}→${R}  ${C}/optimize-skills${R}             ${D}← your skills learn from how you use them${R}\n"
+  echo ""
+
+  # Learning loop
+  printf "${D}──${R}  ${B}LEARNING LOOP${R} ${D}(local, private, fully automatic)${R} ${D}────────────────${R}\n"
+  echo ""
+  printf "  Self-improving, hands-free: every prompt is auto-sharpened, every skill\n"
+  printf "  run is traced locally, and your skills auto-retune in the background once\n"
+  printf "  enough usage builds up. The more you use it, the better it fits you.\n"
+  printf "  ${D}Check it:${R} ${C}stellar-loop status${R}   ${D}Off:${R} ${C}STELLAR_BUILD_NO_LOOP=1 / NO_REPROMPT=1${R}\n"
   echo ""
 
   # Footer stats
@@ -393,6 +507,12 @@ if [ "$PREFIX" != "$HOME" ] && [ ! -d "$PREFIX/.git" ]; then
   printf "  %sTip:%s for multi-agent /party-mode to spawn isolated subagents,\n" "$YELLOW" "$RESET"
   printf "  initialize this folder as a git repo with at least one commit:\n"
   printf "    %scd %s && git init && git commit --allow-empty -m init%s\n\n" "$CYAN" "$PREFIX" "$RESET"
+fi
+
+# Learning-loop CLI PATH hint — stellar-loop lives in the config dir's bin/.
+if [ -x "$CONFIG_DIR/bin/stellar-loop" ] && ! has_cmd stellar-loop; then
+  printf "  %sTip:%s manage the learning loop with %sstellar-loop%s. Add it to PATH:\n" "$YELLOW" "$RESET" "$CYAN" "$RESET"
+  printf "    %sexport PATH=\"\$PATH:%s/bin\"%s\n\n" "$CYAN" "$CONFIG_DIR" "$RESET"
 fi
 
 # Uninstall hint — only show --prefix flag if user passed one (otherwise default $HOME)
