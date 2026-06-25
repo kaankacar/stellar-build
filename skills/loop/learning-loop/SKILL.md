@@ -11,10 +11,12 @@ the better they get — without anything leaving your machine. It mirrors OpenJa
 
 Three moving parts:
 
-1. **Capture** — a Claude Code `PostToolUse:Skill` hook records every skill
-   invocation (skill name, trigger args, a truncated result preview) to
-   `~/.stellar/traces/<day>.jsonl`. Fully local. Opt out with
-   `STELLAR_BUILD_NO_TRACE=1`.
+1. **Capture** — a skill *use* is a multi-turn **span**, so capture is decoupled
+   from "skill became active". A `PostToolUse:Skill` hook marks which skill is
+   resident; a `Stop` hook records each turn's **real** assistant output; and a
+   `SessionEnd` hook closes the span with a summary, counting it as one
+   activation. Everything lands in `~/.stellar/traces/<day>.jsonl`. Fully local.
+   Opt out with `STELLAR_BUILD_NO_TRACE=1`.
 2. **Optimize** (`/optimize-skills`) — compiles those traces into sharper skills:
    tightened triggers/instructions and few-shot examples mined from your own
    successful runs. Every edit is backed up and reversible.

@@ -48,21 +48,26 @@ ensure_dirs() { mkdir -p "$TRACES" "$BACKUPS" "$BENCH"; }
 
 trace_files() { find "$TRACES" -maxdepth 1 -name '*.jsonl' 2>/dev/null | sort; }
 
+# Count skill ACTIVATIONS: one closed span (kind:"span") + legacy synchronous
+# records (event:"skill_invoked", e.g. Codex). Per-turn records (kind:"turn")
+# are sub-units of a span and are not counted here.
 total_traces() {
   local n=0 f
   while IFS= read -r f; do
     [ -n "$f" ] || continue
-    n=$((n + $(grep -c '"event":"skill_invoked"' "$f" 2>/dev/null || echo 0)))
+    n=$((n + $(grep -cE '"kind":"span"|"event":"skill_invoked"' "$f" 2>/dev/null || echo 0)))
   done < <(trace_files)
   echo "$n"
 }
 
-# Per-skill counts: "<count> <skill>" lines, descending. Pure grep/sed so it
+# Per-skill activation counts: "<count> <skill>" lines, descending. Counts only
+# activation records (spans + legacy), not per-turn records. Pure grep/sed so it
 # works with no node/jq present.
 skill_counts() {
   trace_files | while IFS= read -r f; do
     [ -n "$f" ] || continue
-    grep -o '"skill":"[^"]*"' "$f" 2>/dev/null | sed 's/"skill":"//;s/"$//'
+    grep -E '"kind":"span"|"event":"skill_invoked"' "$f" 2>/dev/null \
+      | grep -o '"skill":"[^"]*"' | sed 's/"skill":"//;s/"$//'
   done | sort | uniq -c | sort -rn
 }
 
@@ -93,7 +98,7 @@ cmd_status() {
   fi
   printf "  trace hook    %s\n" "$hook_state"
 
-  printf "  traces        %s skill invocations across %s day(s)\n" \
+  printf "  traces        %s skill activations (spans) across %s day(s)\n" \
     "$(total_traces)" "$(trace_files | wc -l | tr -d ' ')"
 
   local opt=0
@@ -135,7 +140,7 @@ cmd_stats() {
     [ -n "$name" ] || continue
     printf "  %5s  %s\n" "$count" "$name"
   done
-  printf "\n  %s%s total invocations.%s Skills with >= 5 are good optimize candidates.\n\n" "$C_D" "$total" "$C_R"
+  printf "\n  %s%s total activations.%s Skills with >= 5 spans are good optimize candidates.\n\n" "$C_D" "$total" "$C_R"
 }
 
 cmd_tail() {

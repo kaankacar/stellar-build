@@ -1,19 +1,31 @@
 #!/usr/bin/env node
-// stellar-build learning loop — trace capture (PostToolUse).
+// stellar-build learning loop — skill-activation capture (PostToolUse:Skill).
 //
-// Reads a Claude Code / Codex CLI hook event from stdin and appends ONE local
-// trace record to ~/.stellar/traces/<UTC-day>.jsonl, then bumps the rolling
-// counter the auto-trigger reads. Fully local: nothing is transmitted anywhere.
-// Designed to never throw, never block the session.
+// A skill *use* is a multi-turn span, not a single tool call. The Skill tool
+// fires exactly ONCE when a skill mounts (the harness forbids re-invoking an
+// already-loaded skill), and at that instant the tool_response is only the
+// mount acknowledgment — `{"success":true,"commandName":"<skill>"}` — not any
+// work the skill produced. So this hook no longer writes a trace record here.
 //
-// Opt out entirely with STELLAR_BUILD_NO_TRACE=1.
-// Override the data root with STELLAR_HOME.
-// The wrapper sets STELLAR_TRACE_AGENT=codex for Codex; defaults to "claude".
+// Instead it opens a per-session ACTIVE pointer at
+// <STELLAR_HOME>/.active/<session>.json describing which skill is now resident.
+// The Stop hook (stop-trace.js) writes one record per turn against that pointer
+// with the real assistant output, and the SessionEnd hook (session-end.js)
+// closes the span. A *new* Skill invocation rotates the pointer and closes the
+// previous span first, which is how persona handoffs (e.g. justin-analyst ->
+// nicole-pm) get captured cleanly.
+//
+// Codex is the exception: it has no reliable Stop/SessionEnd + transcript
+// pipeline, and backfills via `stellar-loop ingest-codex`, so for Codex we keep
+// the original synchronous record so its coverage does not go dark.
+//
+// Fully local. Never throws, never blocks the session.
+// Opt out: STELLAR_BUILD_NO_TRACE=1. Data root: STELLAR_HOME.
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
+const lib = require(path.join(__dirname, 'loop-lib.js'));
 
 let raw = '';
 process.stdin.setEncoding('utf8');
@@ -35,61 +47,60 @@ process.stdin.on('end', () => {
     else if (/^skill$/i.test(toolName) && typeof ti.skill === 'string') skill = ti.skill;
     if (!skill) return;
 
-    const home = process.env.STELLAR_HOME || path.join(os.homedir(), '.stellar');
-    const dir = path.join(home, 'traces');
-    fs.mkdirSync(dir, { recursive: true });
-
+    const home = lib.homeDir();
     const agent = process.env.STELLAR_TRACE_AGENT || 'claude';
     const session = ev.session_id || ev.sessionId || null;
-
-    let resp = ev.tool_response;
-    if (typeof resp !== 'string') {
-      try { resp = JSON.stringify(resp || ''); } catch (_) { resp = ''; }
-    }
-    const fullLen = resp ? resp.length : 0;
-
-    // Pair with the user's natural-language prompt if capture-prompt stored one
-    // for this session. This is the single biggest quality lift for mined demos:
-    // it lets the optimizer learn "when the user phrases it like X, do Y".
-    let prompt = null;
-    try {
-      if (session) {
-        const pf = path.join(home, '.prompts',
-          String(session).replace(/[^A-Za-z0-9_.-]/g, '_') + '.txt');
-        if (fs.existsSync(pf)) prompt = fs.readFileSync(pf, 'utf8').slice(0, 600);
-      }
-    } catch (_) { /* prompt pairing is best-effort */ }
-
     const ts = new Date().toISOString();
-    const rec = {
-      ts,
-      event: 'skill_invoked',
-      agent,
+    const prompt = session ? lib.readPrompt(home, session, 600) : null;
+
+    // --- Codex: preserve the legacy synchronous record (no Stop pipeline). ---
+    if (agent === 'codex') {
+      let resp = ev.tool_response;
+      if (typeof resp !== 'string') {
+        try { resp = JSON.stringify(resp || ''); } catch (_) { resp = ''; }
+      }
+      const rec = {
+        ts,
+        event: 'skill_invoked',
+        agent,
+        skill,
+        prompt,
+        args: typeof ti.args === 'string' ? ti.args.slice(0, 600) : (ti.args || null),
+        result_preview: resp ? resp.slice(0, 1000) : '',
+        result_len: resp ? resp.length : 0,
+        cwd: ev.cwd || null,
+        session,
+      };
+      lib.appendTrace(home, rec);
+      lib.bumpActivation(home, ts);
+      return;
+    }
+
+    // --- Claude Code: open / rotate the active-skill pointer. ---
+    if (!session) return; // can't track a span without a session id
+
+    const ptrFile = lib.activePath(home, session);
+    const prev = lib.readJSON(ptrFile);
+
+    // A new Skill invocation closes any span already open for this session
+    // (handoff or re-mount), then starts a fresh span.
+    if (prev && prev.skill) {
+      lib.closeSpan(home, prev, { ts, reason: 'handoff' });
+    }
+
+    lib.writeJSON(ptrFile, {
       skill,
-      prompt,
+      since: ts,
+      prompt,                 // opening prompt of this span
+      span_id: lib.newSpanId(session),
+      turns: 0,
+      agent,
       args: typeof ti.args === 'string' ? ti.args.slice(0, 600) : (ti.args || null),
-      result_preview: resp ? resp.slice(0, 1000) : '',
-      result_len: fullLen,
       cwd: ev.cwd || null,
       session,
-    };
-
-    fs.appendFileSync(
-      path.join(dir, ts.slice(0, 10) + '.jsonl'),
-      JSON.stringify(rec) + '\n'
-    );
-
-    // Bump the rolling counter the SessionStart auto-trigger reads, so the loop
-    // can decide when enough new usage has accumulated to retune.
-    try {
-      const sf = path.join(home, 'state.json');
-      let st = {};
-      try { st = JSON.parse(fs.readFileSync(sf, 'utf8') || '{}') || {}; } catch (_) { st = {}; }
-      st.traces_total = (st.traces_total || 0) + 1;
-      st.traces_since_optimize = (st.traces_since_optimize || 0) + 1;
-      st.last_trace_ts = ts;
-      fs.writeFileSync(sf, JSON.stringify(st));
-    } catch (_) { /* counter is best-effort */ }
+      last_preview: '',
+      last_result_len: 0,
+    });
   } catch (_) {
     // Tracing is best-effort. A bad event must never break the user's session.
   }

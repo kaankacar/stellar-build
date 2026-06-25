@@ -269,7 +269,7 @@ if [ -d "$OUR_SRC/skills" ]; then
   # Learning loop — the trace hook and CLI live outside the skills dir, under
   # the config dir (~/.stellar). The skill folders themselves (learning-loop,
   # optimize-skills, bench-skills) install via the folder-skill loop above.
-  mkdir -p "$CONFIG_DIR/traces" "$CONFIG_DIR/backups" "$CONFIG_DIR/bench" "$CONFIG_DIR/hooks" "$CONFIG_DIR/bin"
+  mkdir -p "$CONFIG_DIR/traces" "$CONFIG_DIR/backups" "$CONFIG_DIR/bench" "$CONFIG_DIR/hooks" "$CONFIG_DIR/bin" "$CONFIG_DIR/.active" "$CONFIG_DIR/.prompts"
   if [ -d "$OUR_SRC/skills/loop/hooks" ]; then
     cp -f "$OUR_SRC/skills/loop/hooks/"* "$CONFIG_DIR/hooks/" 2>/dev/null || true
     chmod +x "$CONFIG_DIR/hooks/"*.sh 2>/dev/null || true
@@ -340,10 +340,16 @@ elif [ ! -f "$CLAUDE_SETTINGS" ]; then
 fi
 
 # --- Learning loop: register hooks (Claude Code + Codex) ---
-# Three hooks make the loop automatic and high-signal:
-#   PostToolUse       -> trace-skill.sh        (capture every skill invocation)
-#   UserPromptSubmit  -> capture-prompt.sh     (pair the prompt with the skill)
+# These hooks make the loop automatic and high-signal. A skill use is a
+# multi-turn span, so capture is decoupled from "skill became active":
+#   PostToolUse       -> trace-skill.sh        (open/rotate the active-skill pointer)
+#   Stop              -> stop-trace.sh         (Claude only: one real record per turn)
+#   SessionEnd        -> session-end.sh        (Claude only: close the span, bump once)
+#   UserPromptSubmit  -> capture-prompt.sh     (stash the prompt for pairing)
+#   UserPromptSubmit  -> reprompt.sh           (per-turn prompt sharpener)
 #   SessionStart      -> loop-session-start.sh (self-trigger: nudge / auto-optimize)
+# Codex has no Stop/SessionEnd + transcript pipeline, so trace-skill.sh keeps
+# writing a synchronous record there (backfilled by `stellar-loop ingest-codex`).
 # Claude Code reads ~/.claude/settings.json; Codex reads ~/.codex/hooks.json —
 # both share the same hook schema, so one merge routine serves both. Idempotent:
 # re-running install (or --update) never adds duplicates.
@@ -371,6 +377,14 @@ register_loop_hooks() {  # $1 = target json file, $2 = agent (claude|codex)
       { event: "UserPromptSubmit", matcher: "",                                 cmd: `${hooksDir}/reprompt.sh` },
       { event: "SessionStart",     matcher: "",                                 cmd: `${hooksDir}/loop-session-start.sh` },
     ];
+    // A skill use is a multi-turn span, but the Skill tool fires once per mount.
+    // On Claude Code the real per-turn output is captured by Stop and the span
+    // is closed at SessionEnd. Codex has neither event nor transcript_path, so
+    // it keeps the synchronous PostToolUse record (+ ingest-codex backfill).
+    if (agent !== "codex") {
+      specs.push({ event: "Stop",       matcher: "", cmd: `${hooksDir}/stop-trace.sh` });
+      specs.push({ event: "SessionEnd", matcher: "", cmd: `${hooksDir}/session-end.sh` });
+    }
     for (const s of specs) {
       c.hooks[s.event] = Array.isArray(c.hooks[s.event]) ? c.hooks[s.event] : [];
       const exists = c.hooks[s.event].some(g =>

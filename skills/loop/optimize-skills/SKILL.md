@@ -12,8 +12,9 @@ skill files: refined trigger descriptions, tightened instructions, and mined
 few-shot examples drawn from your own successful runs.
 
 Think of it in DSPy terms:
-- **Trainset** = your trace records in `~/.stellar/traces/*.jsonl`
-- **Metric** = an LLM-as-judge quality label you assign to each trace
+- **Trainset** = your trace records in `~/.stellar/traces/*.jsonl`, grouped into
+  **spans** (one continuous use of a skill within a session — see below)
+- **Metric** = an LLM-as-judge quality label you assign to each *span*
 - **Compile** = rewriting the skill's instructions + few-shot demos from the wins
 
 Everything is local and reversible. The original of every edited skill is backed
@@ -24,7 +25,7 @@ up to `~/.stellar/backups/<skill>/SKILL.md.<timestamp>` before any change, and
 
 Do these steps in order. Be conservative: this edits files the user relies on.
 
-### 1. Load the traces
+### 1. Load the traces and group them into spans
 
 Read the trace store:
 
@@ -32,29 +33,53 @@ Read the trace store:
 ~/.stellar/traces/*.jsonl
 ```
 
-Each line is one record: `{ ts, event:"skill_invoked", skill, args, result_preview, result_len, cwd, session }`.
+A skill *use* is a multi-turn **span**, not a single tool call, so records come
+in three shapes — key off the `kind` field:
+
+- `kind:"turn"` — one user→assistant turn while a skill was resident:
+  `{ kind:"turn", skill, prompt, result_preview, result_len, span_id, turn_index, session, ts }`.
+  `result_preview` is the **real assistant output** for that turn (capped ~1500 chars).
+- `kind:"span"` — the summary written when the span closed (at SessionEnd or on a
+  persona handoff): `{ kind:"span", skill, prompt (opening), result_preview (final
+  work product), turns, span_id, session, ts }`.
+- **Legacy / coverage-only** — older records and live Codex records have **no
+  `kind`** and `event:"skill_invoked"`; their `result_preview` is just the mount
+  acknowledgment (`{"success":true,"commandName":"…"}`, ~47 chars). These count
+  toward coverage but carry **no work product** — never mine demos from them.
+
+**Group records by span**: a span is identified by `span_id` (fall back to
+`session` × `skill` for legacy records). One span = one usage, regardless of how
+many turns it spans. The `kind:"span"` record is the span's summary; the
+`kind:"turn"` records are its detail.
 
 If `STELLAR_HOME` is set in the environment, use that instead of `~/.stellar`.
 If there are no traces, tell the user to use some skills first (and confirm the
-trace hook is registered — `stellar-loop status` shows this), then stop.
+hooks are registered — `stellar-loop status` shows this), then stop.
 
 If the user named a specific skill (e.g. "optimize find-stellar-idea"), filter to
-that skill. Otherwise consider every skill with **at least 5 traces** — fewer than
-that is too little signal to compile from; say so and skip it.
+that skill. Otherwise consider every skill with **at least 5 spans** — fewer than
+that is too little signal to compile from; say so and skip it. (Count spans, not
+raw records: five turns of one resident-skill session is **one** span, not five.)
 
 ### 2. Score each trace (the metric)
 
-For each candidate skill, group its traces and judge them as an honest, skeptical
-evaluator. Label each trace **win / neutral / loss** using signals you can see:
-- Did the `args` clearly match what the skill is for? (good trigger fit)
-- Does `result_preview` show the skill did its job vs. flailing, asking for
-  re-clarification, or producing something off-target?
-- Repeated back-to-back invocations of the same skill in one `session` often
-  signal the first attempt missed — a loss signal.
-- A long, on-topic `result_len` after a precise `args` is a win signal.
+For each candidate skill, judge each **span** (not each raw record) as an honest,
+skeptical evaluator. Label each span **win / neutral / loss** using signals you
+can see:
+- Did the opening `prompt` / `args` clearly match what the skill is for? (good
+  trigger fit)
+- Does the work product — the `kind:"span"` `result_preview`, or the
+  concatenated `kind:"turn"` previews — show the skill did its job vs. flailing,
+  asking for re-clarification, or producing something off-target?
+- **Re-prompts within a span** are the loss signal: several `kind:"turn"` records
+  under one `span_id` where the user keeps re-asking or correcting (rather than
+  building forward) suggest the skill missed on the first pass. Judge by the
+  *turns within the span*, not by counting separate activations — a resident
+  skill legitimately spans many turns.
+- A long, on-topic work product after a precise opening prompt is a win signal.
 
 Be calibrated, not generous. If you're unsure, call it neutral. Keep only the
-**wins** as material to learn from.
+**winning spans** as material to learn from.
 
 ### 3. Compile (the optimization)
 
@@ -73,9 +98,13 @@ the `description` triggers and the body instructions to match reality. Add defau
 the user clearly prefers (e.g. they always want the weekend-hack framing, or always
 target testnet first). Never delete the skill's core capability — only sharpen it.
 
-**(b) Few-shot demos.** Distill 1–3 of the strongest wins into compact, generalized
-examples and place them in a clearly delimited, regenerable block at the END of the
-skill body:
+**(b) Few-shot demos.** Distill 1–3 of the strongest **winning spans** into compact,
+generalized examples. Mine them from `kind:"span"` / `kind:"turn"` records — these
+now hold the real assistant work product (the opening prompt paired with what the
+skill actually produced), which is exactly the demonstration material DSPy needs.
+**Never mine a demo from a legacy / coverage-only record** (no `kind`, mount-stub
+`result_preview`): it has no work product to learn from. Place the demos in a
+clearly delimited, regenerable block at the END of the skill body:
 
 ```markdown
 <!-- LEARNED:BEGIN (auto-generated by optimize-skills — safe to delete/regenerate) -->
