@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-PRODUCT_NAME="stellar"
+PRODUCT_NAME="stellar-build"
 
 # Multi-source: each source ships skills from a different upstream.
 # Override URLs via env var; override with a local path via LOCAL_* for testing.
@@ -52,8 +52,17 @@ done
 CLAUDE_SKILLS="$PREFIX/.claude/skills"
 CODEX_SKILLS="$PREFIX/.codex/skills"
 CONFIG_DIR="$PREFIX/.${PRODUCT_NAME}"
+# Pre-July-2026 installs used ~/.stellar — which collides with the Stellar
+# CLI's (deprecated) global config dir and made the CLI print deprecation
+# notices. We migrate our files out and never touch anything else in there.
+LEGACY_CONFIG_DIR="$PREFIX/.stellar"
 MANIFEST_FILE="$CONFIG_DIR/manifest.json"
 CLAUDE_SETTINGS="$PREFIX/.claude/settings.json"
+
+# Everything stellar-build ever writes into its config dir. Used to migrate
+# out of (and safely clean up) the legacy ~/.stellar without touching files
+# owned by the Stellar CLI.
+OWNED_CONFIG_ITEMS="manifest.json traces backups bench hooks bin cache .active .prompts profile.md optimizations.jsonl state.json .codex_ingested"
 
 # --- Manifest helpers ---
 read_manifest_array() {
@@ -62,9 +71,55 @@ read_manifest_array() {
     | grep -o '"[^"]*"' | tr -d '"'
 }
 
+# Strip every learning-loop hook (trace / prompt-capture / session-start) that
+# points into a given hooks dir, from a Claude settings.json or Codex
+# hooks.json. Shared by uninstall and the legacy-dir migration.
+clean_hooks_by_marker() {  # $1 = json file, $2 = hooks-dir marker
+  local f="$1" marker="$2"
+  [ -f "$f" ] || return 0
+  has_cmd node || return 1
+  node -e '
+    const fs = require("fs");
+    const [file, marker] = process.argv.slice(1);
+    const c = JSON.parse(fs.readFileSync(file, "utf8") || "{}");
+    if (c.hooks && typeof c.hooks === "object") {
+      for (const ev of Object.keys(c.hooks)) {
+        if (!Array.isArray(c.hooks[ev])) continue;
+        c.hooks[ev] = c.hooks[ev]
+          .map(g => (g && Array.isArray(g.hooks))
+            ? { ...g, hooks: g.hooks.filter(h => !(h && typeof h.command === "string" && h.command.includes(marker))) }
+            : g)
+          .filter(g => !(g && Array.isArray(g.hooks) && g.hooks.length === 0));
+        if (c.hooks[ev].length === 0) delete c.hooks[ev];
+      }
+      if (Object.keys(c.hooks).length === 0) delete c.hooks;
+    }
+    fs.writeFileSync(file, JSON.stringify(c, null, 2));
+  ' "$f" "$marker" 2>/dev/null
+}
+
+# Remove only stellar-build-owned items from a config dir, then remove the dir
+# itself only if nothing else remains (the legacy ~/.stellar may hold Stellar
+# CLI files — those must survive).
+remove_owned_config() {  # $1 = config dir
+  local dir="$1" item
+  [ -d "$dir" ] || return 0
+  for item in $OWNED_CONFIG_ITEMS; do
+    rm -rf "${dir:?}/$item" 2>/dev/null || true
+  done
+  rmdir "$dir" 2>/dev/null || true
+}
+
 # --- Uninstall mode ---
 if [ "$UNINSTALL_MODE" = true ]; then
   printf "\n  %s%sUninstalling %s...%s\n\n" "$CYAN" "$BOLD" "$PRODUCT_NAME" "$RESET"
+  # Fall back to the legacy ~/.stellar location for installs that predate the
+  # ~/.stellar-build rename and were never updated.
+  if [ ! -f "$MANIFEST_FILE" ] && [ -f "$LEGACY_CONFIG_DIR/manifest.json" ]; then
+    CONFIG_DIR="$LEGACY_CONFIG_DIR"
+    MANIFEST_FILE="$CONFIG_DIR/manifest.json"
+    warn "Using legacy config at $CONFIG_DIR"
+  fi
   if [ ! -f "$MANIFEST_FILE" ]; then
     warn "No manifest found at $MANIFEST_FILE — nothing to uninstall"
     exit 0
@@ -111,40 +166,33 @@ EOF
     " 2>/dev/null && ok "Reverted Claude Code permissions" || warn "Could not revert Claude settings"
   fi
 
-  # Remove the learning-loop trace hook from Claude settings.
-  # Strip every learning-loop hook (trace / prompt-capture / session-start) from
-  # both Claude settings.json and Codex hooks.json. We match by the hooks dir
-  # marker, so all three events are cleaned regardless of how they're nested.
-  HOOKS_MARKER="$CONFIG_DIR/hooks/"
-  clean_loop_hooks() {  # $1 = json file
-    local f="$1"
-    [ -f "$f" ] || return 0
-    node -e '
-      const fs = require("fs");
-      const [file, marker] = process.argv.slice(1);
-      const c = JSON.parse(fs.readFileSync(file, "utf8") || "{}");
-      if (c.hooks && typeof c.hooks === "object") {
-        for (const ev of Object.keys(c.hooks)) {
-          if (!Array.isArray(c.hooks[ev])) continue;
-          c.hooks[ev] = c.hooks[ev]
-            .map(g => (g && Array.isArray(g.hooks))
-              ? { ...g, hooks: g.hooks.filter(h => !(h && typeof h.command === "string" && h.command.includes(marker))) }
-              : g)
-            .filter(g => !(g && Array.isArray(g.hooks) && g.hooks.length === 0));
-          if (c.hooks[ev].length === 0) delete c.hooks[ev];
-        }
-        if (Object.keys(c.hooks).length === 0) delete c.hooks;
-      }
-      fs.writeFileSync(file, JSON.stringify(c, null, 2));
-    ' "$f" "$HOOKS_MARKER" 2>/dev/null
-  }
+  # Remove the learning-loop hooks from Claude settings and Codex hooks.json.
+  # We match by hooks-dir marker (both the current and the legacy location),
+  # so all events are cleaned regardless of how they're nested.
   if has_cmd node; then
-    clean_loop_hooks "$CLAUDE_SETTINGS" && ok "Removed learning-loop hooks from Claude settings" \
+    { clean_hooks_by_marker "$CLAUDE_SETTINGS" "$CONFIG_DIR/hooks/" \
+        && clean_hooks_by_marker "$CLAUDE_SETTINGS" "$LEGACY_CONFIG_DIR/hooks/"; } \
+      && ok "Removed learning-loop hooks from Claude settings" \
       || warn "Could not clean Claude hooks"
-    clean_loop_hooks "$PREFIX/.codex/hooks.json" && ok "Removed learning-loop hooks from Codex"
+    clean_hooks_by_marker "$PREFIX/.codex/hooks.json" "$CONFIG_DIR/hooks/" \
+      && clean_hooks_by_marker "$PREFIX/.codex/hooks.json" "$LEGACY_CONFIG_DIR/hooks/" \
+      && ok "Removed learning-loop hooks from Codex"
   fi
 
-  rm -rf "$CONFIG_DIR"
+  # Disconnect the Raven MCP server if this install added it.
+  if grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null && has_cmd claude; then
+    claude mcp remove --scope user stellar-raven >/dev/null 2>&1 \
+      && ok "Disconnected Raven MCP from Claude Code" || true
+  fi
+  if grep -q '"ravenCodex":true' "$MANIFEST_FILE" 2>/dev/null && [ -f "$PREFIX/.codex/config.toml" ]; then
+    sed -i.bak '/^\[mcp_servers\.stellar-raven\]$/,/^args = .*mcp-remote.*\]$/d' "$PREFIX/.codex/config.toml" 2>/dev/null \
+      && rm -f "$PREFIX/.codex/config.toml.bak" \
+      && ok "Disconnected Raven MCP from Codex" || true
+  fi
+
+  # Never `rm -rf` the legacy ~/.stellar — the Stellar CLI may keep its own
+  # config there. Remove only what we own; the dir goes away only if empty.
+  remove_owned_config "$CONFIG_DIR"
   ok "Removed $REMOVED skills and config"
   printf "\n  %sTo reinstall: ./install.sh%s\n\n" "$DIM" "$RESET"
   exit 0
@@ -223,6 +271,27 @@ $STELLAR_DEV_AVAILABLE && ok "stellar-dev ready"
 
 # --- Install ---
 log "Installing to $PREFIX..."
+
+# Migrate pre-July-2026 installs out of the legacy ~/.stellar dir (it collides
+# with the Stellar CLI's deprecated global config dir). Move only files we own,
+# leave everything else — and the dir itself, unless empty — untouched.
+if [ -f "$LEGACY_CONFIG_DIR/manifest.json" ] && [ ! -f "$MANIFEST_FILE" ]; then
+  log "Migrating config from $LEGACY_CONFIG_DIR to $CONFIG_DIR..."
+  mkdir -p "$CONFIG_DIR"
+  for item in $OWNED_CONFIG_ITEMS; do
+    [ -e "$LEGACY_CONFIG_DIR/$item" ] && mv "$LEGACY_CONFIG_DIR/$item" "$CONFIG_DIR/" 2>/dev/null || true
+  done
+  if rmdir "$LEGACY_CONFIG_DIR" 2>/dev/null; then
+    ok "Migrated and removed $LEGACY_CONFIG_DIR"
+  else
+    ok "Migrated stellar-build files ($LEGACY_CONFIG_DIR kept — it holds other files, likely Stellar CLI config)"
+  fi
+  # Old hook registrations point at the legacy path; strip them here — the
+  # hook-registration step below re-adds them at the new location.
+  clean_hooks_by_marker "$CLAUDE_SETTINGS" "$LEGACY_CONFIG_DIR/hooks/" || true
+  clean_hooks_by_marker "$PREFIX/.codex/hooks.json" "$LEGACY_CONFIG_DIR/hooks/" || true
+fi
+
 mkdir -p "$CLAUDE_SKILLS" "$CODEX_SKILLS" "$CONFIG_DIR"
 
 FOLDER_SKILLS=""  # names of folder-based installed skills
@@ -267,7 +336,7 @@ if [ -d "$OUR_SRC/skills" ]; then
   fi
 
   # Learning loop — the trace hook and CLI live outside the skills dir, under
-  # the config dir (~/.stellar). The skill folders themselves (learning-loop,
+  # the config dir (~/.stellar-build). The skill folders themselves (learning-loop,
   # optimize-skills, bench-skills) install via the folder-skill loop above.
   mkdir -p "$CONFIG_DIR/traces" "$CONFIG_DIR/backups" "$CONFIG_DIR/bench" "$CONFIG_DIR/hooks" "$CONFIG_DIR/bin" "$CONFIG_DIR/.active" "$CONFIG_DIR/.prompts"
   if [ -d "$OUR_SRC/skills/loop/hooks" ]; then
@@ -280,10 +349,17 @@ if [ -d "$OUR_SRC/skills" ]; then
   fi
 fi
 
-# 2. SCF — flat .md files. GitHub tarballs extract with a "<repo>-<branch>" top dir.
+# 2. SCF — upstream moved from flat .md files to folder-based skills
+#    (<skill>/SKILL.md); handle both layouts. GitHub tarballs extract with a
+#    "<repo>-<branch>" top dir.
 if $SCF_AVAILABLE; then
   SCF_SKILLS_DIR=$(find "$TMP_DIR/scf" -mindepth 1 -maxdepth 2 -type d -name "skills" | head -1)
   if [ -n "$SCF_SKILLS_DIR" ] && [ -d "$SCF_SKILLS_DIR" ]; then
+    for skill_dir in "$SCF_SKILLS_DIR"/*/; do
+      [ -d "$skill_dir" ] || continue
+      [ -f "$skill_dir/SKILL.md" ] || continue
+      install_folder_skill "$skill_dir"
+    done
     for md_file in "$SCF_SKILLS_DIR"/*.md; do
       [ -f "$md_file" ] || continue
       install_flat_skill "$md_file"
@@ -407,6 +483,44 @@ elif ! has_cmd node; then
   warn "node not found — trace capture disabled (optimize/bench still work on existing traces)"
 fi
 
+# --- Raven MCP: Stellar docs + live ecosystem data for every agent/persona ---
+# Raven (raven.stellar.buzz) is the official hosted MCP server for the Stellar
+# ecosystem — `search` over docs + ecosystem, `execute` against live data. The
+# personas lean on it for ground truth, so we wire it up at install time.
+# The playground on the site is a demo; agents connect to the MCP directly.
+RAVEN_URL="https://raven.stellar.buzz/mcp"
+RAVEN_CLAUDE=false
+RAVEN_CODEX=false
+log "Connecting Raven MCP (raven.stellar.buzz)..."
+# Claude Code MCP config is global — only touch it for real (non --prefix) installs.
+if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
+  if claude mcp get stellar-raven >/dev/null 2>&1; then
+    # Carry ownership forward across --update runs so uninstall still cleans up.
+    grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CLAUDE=true
+    ok "Raven MCP already connected in Claude Code"
+  elif claude mcp add --transport http --scope user stellar-raven "$RAVEN_URL" >/dev/null 2>&1; then
+    RAVEN_CLAUDE=true
+    ok "Raven MCP connected for Claude Code (OAuth sign-in on first use)"
+  else
+    warn "Could not add Raven MCP — add manually: claude mcp add --transport http stellar-raven $RAVEN_URL"
+  fi
+elif [ "$PREFIX" != "$HOME" ]; then
+  warn "Sandbox install — skipping global Claude MCP registration"
+fi
+# Codex reaches HTTP MCP servers through the mcp-remote bridge in config.toml.
+CODEX_CONFIG="$PREFIX/.codex/config.toml"
+if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
+  mkdir -p "$PREFIX/.codex"
+  if ! grep -q '\[mcp_servers\.stellar-raven\]' "$CODEX_CONFIG" 2>/dev/null; then
+    printf '\n[mcp_servers.stellar-raven]\ncommand = "npx"\nargs = ["-y", "mcp-remote", "%s"]\n' "$RAVEN_URL" >> "$CODEX_CONFIG"
+    RAVEN_CODEX=true
+    ok "Raven MCP wired for Codex (config.toml via mcp-remote)"
+  else
+    grep -q '"ravenCodex":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CODEX=true
+    ok "Raven MCP already wired for Codex"
+  fi
+fi
+
 # --- Manifest ---
 SKILL_PATHS_JSON=""
 for s in $FOLDER_SKILLS; do
@@ -423,7 +537,7 @@ if [ -n "$PERMS_ADDED" ]; then
 fi
 
 cat > "$MANIFEST_FILE" <<MANIFEST
-{"installedBy":"$PRODUCT_NAME","installedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","prefix":"$PREFIX","skillPaths":[$SKILL_PATHS_JSON],"sharedPaths":["$CLAUDE_SKILLS/data","$CLAUDE_SKILLS/SKILL_ROUTER.md","$CODEX_SKILLS/data","$CODEX_SKILLS/SKILL_ROUTER.md"],"permissionsAdded":[$PERMS_JSON],"traceHook":"$HOOK_CMD","hooksDir":"$HOOKS_DIR","codexHooks":"$CODEX_HOOKS","settingsFile":"$CLAUDE_SETTINGS"}
+{"installedBy":"$PRODUCT_NAME","installedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","prefix":"$PREFIX","skillPaths":[$SKILL_PATHS_JSON],"sharedPaths":["$CLAUDE_SKILLS/data","$CLAUDE_SKILLS/SKILL_ROUTER.md","$CODEX_SKILLS/data","$CODEX_SKILLS/SKILL_ROUTER.md"],"permissionsAdded":[$PERMS_JSON],"traceHook":"$HOOK_CMD","hooksDir":"$HOOKS_DIR","codexHooks":"$CODEX_HOOKS","settingsFile":"$CLAUDE_SETTINGS","ravenClaude":$RAVEN_CLAUDE,"ravenCodex":$RAVEN_CODEX}
 MANIFEST
 ok "Wrote manifest to $MANIFEST_FILE"
 

@@ -94,7 +94,7 @@ If user is researching:
 ## Constraints
 
 - Be polite to communityfund.stellar.org — sequential fetches or low concurrency (5 max)
-- Cache fetched data in `~/.stellar/cache/scf-round/<rec-id>.json` for the session
+- Cache fetched data in `~/.stellar-build/cache/scf-round/<rec-id>.json` for the session
 - If the site is down or returns non-200, report cleanly and suggest the user visit communityfund.stellar.org directly. Do not fabricate data.
 - If dates aren't visible on the page, say "deadline not extractable from page" — don't speculate
 - The active-round detection assumes exactly one round has status "Submission" at a time. If multiple or none, surface that as a finding

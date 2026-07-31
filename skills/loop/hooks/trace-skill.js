@@ -8,7 +8,7 @@
 // work the skill produced. So this hook no longer writes a trace record here.
 //
 // Instead it opens a per-session ACTIVE pointer at
-// <STELLAR_HOME>/.active/<session>.json describing which skill is now resident.
+// <STELLAR_BUILD_HOME>/.active/<session>.json describing which skill is now resident.
 // The Stop hook (stop-trace.js) writes one record per turn against that pointer
 // with the real assistant output, and the SessionEnd hook (session-end.js)
 // closes the span. A *new* Skill invocation rotates the pointer and closes the
@@ -20,7 +20,7 @@
 // the original synchronous record so its coverage does not go dark.
 //
 // Fully local. Never throws, never blocks the session.
-// Opt out: STELLAR_BUILD_NO_TRACE=1. Data root: STELLAR_HOME.
+// Opt out: STELLAR_BUILD_NO_TRACE=1. Data root: STELLAR_BUILD_HOME.
 'use strict';
 
 const fs = require('fs');

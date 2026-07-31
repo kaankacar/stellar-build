@@ -24,16 +24,16 @@ It is read-only: it never edits skills. It only produces scores and a report.
 
 For each target skill, build a small held-out set of representative prompts:
 
-1. If `~/.stellar/bench/<skill>.jsonl` exists, use it. Each line:
+1. If `~/.stellar-build/bench/<skill>.jsonl` exists, use it. Each line:
    `{ "prompt": "...", "rubric": "what a great response must do" }`.
-2. Otherwise, mine candidates from `~/.stellar/traces/*.jsonl`. Records are
+2. Otherwise, mine candidates from `~/.stellar-build/traces/*.jsonl`. Records are
    grouped into **spans** (see optimize-skills for the schema): take the real
    opening `prompt` of each span the user triggered this skill with, **hold them
    out** (do not also use them as optimization demos), and pair each with a short
    rubric you infer from the skill's stated purpose. Use one prompt **per span**,
    not per turn, and skip legacy / coverage-only records (no `kind`, mount-stub
    `result_preview`) — they carry no usable trigger. Then persist them to
-   `~/.stellar/bench/<skill>.jsonl` so future runs are stable.
+   `~/.stellar-build/bench/<skill>.jsonl` so future runs are stable.
 3. If there is neither a saved set nor enough traces, synthesize 3 plausible prompts
    from the skill's `description` and note that the set is synthetic.
 
@@ -62,7 +62,7 @@ across runs; the same skill text and seed should yield the same score.
 
 If the user wants the lift from a recent optimization (or just asks "did it help"):
 1. Score the current installed skill (the "after").
-2. Score the most recent backup at `~/.stellar/backups/<skill>/SKILL.md.<latest>`
+2. Score the most recent backup at `~/.stellar-build/backups/<skill>/SKILL.md.<latest>`
    as the "before", using the **same** prompts and seeds.
 3. Report both and the delta.
 
@@ -73,7 +73,7 @@ Per skill: mean score, per-prompt scores, and — in before/after mode — the l
 skills. Call out any skill that regressed (after < before) and suggest
 `stellar-loop restore <skill>`.
 
-Optionally append a run record to `~/.stellar/bench/results.jsonl`:
+Optionally append a run record to `~/.stellar-build/bench/results.jsonl`:
 
 ```json
 {"ts":"<UTC>","skill":"<name>","mean":4.2,"n":5,"seeds":[42],"mode":"after"}
@@ -85,4 +85,4 @@ Optionally append a run record to `~/.stellar/bench/results.jsonl`:
 - **Reproducible.** Same skill text + same seed ⇒ same score. Hold seeds fixed
   across before/after.
 - **Honest.** A synthetic or tiny eval set is a weak signal — say so in the report.
-- **Local only.** Everything reads from `~/.stellar` and the installed skills.
+- **Local only.** Everything reads from `~/.stellar-build` and the installed skills.

@@ -17,7 +17,7 @@
 //        STELLAR_BUILD_OPTIMIZE_THRESHOLD (default 20),
 //        STELLAR_BUILD_OPTIMIZE_COOLDOWN_HOURS (default 6),
 //        STELLAR_BUILD_NO_LOOP=1 disables the trigger entirely,
-//        STELLAR_HOME overrides the data root.
+//        STELLAR_BUILD_HOME overrides the data root.
 'use strict';
 
 const fs = require('fs');
@@ -36,7 +36,7 @@ function hasClaude() { try { cp.execSync('command -v claude', { stdio: 'ignore' 
     if (process.env.STELLAR_LOOP_AUTORUN) return;
     if (truthy(process.env.STELLAR_BUILD_NO_LOOP)) return;
 
-    const home = process.env.STELLAR_HOME || path.join(os.homedir(), '.stellar');
+    const home = process.env.STELLAR_BUILD_HOME || path.join(os.homedir(), '.stellar-build');
     const sf = path.join(home, 'state.json');
     const st = readJSON(sf);
 
@@ -64,7 +64,7 @@ function hasClaude() { try { cp.execSync('command -v claude', { stdio: 'ignore' 
       } catch (_) { /* lock is best-effort */ }
 
       const prompt = 'Automated background run: use the optimize-skills skill to read my '
-        + '~/.stellar usage traces and compile them into sharper skills. Be conservative '
+        + '~/.stellar-build usage traces and compile them into sharper skills. Be conservative '
         + 'and skip any skill with thin signal. Do not ask me questions; just do it.';
       try {
         const child = cp.spawn('claude', ['-p', prompt], {

@@ -22,7 +22,7 @@ process.stdin.on('end', () => {
     const session = ev.session_id || ev.sessionId;
     if (!prompt || !session) return;
 
-    const home = process.env.STELLAR_HOME || path.join(os.homedir(), '.stellar');
+    const home = process.env.STELLAR_BUILD_HOME || path.join(os.homedir(), '.stellar-build');
     const dir = path.join(home, '.prompts');
     fs.mkdirSync(dir, { recursive: true });
     const f = path.join(dir, String(session).replace(/[^A-Za-z0-9_.-]/g, '_') + '.txt');

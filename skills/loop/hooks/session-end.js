@@ -7,7 +7,7 @@
 // and bumps the activation counter EXACTLY ONCE for the whole span — never per
 // turn — so the SessionStart auto-trigger's "20" still means "20 activations".
 //
-// Fully local, best-effort. Opt out: STELLAR_BUILD_NO_TRACE=1. Root: STELLAR_HOME.
+// Fully local, best-effort. Opt out: STELLAR_BUILD_NO_TRACE=1. Root: STELLAR_BUILD_HOME.
 'use strict';
 
 const fs = require('fs');

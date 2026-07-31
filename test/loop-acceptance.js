@@ -88,7 +88,7 @@ function userMessageLine(i) {
 function scenarioResident() {
   console.log('\nScenario 1 — resident skill across 5 turns\n');
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'stellar-loop-test-'));
-  const env = Object.assign({}, process.env, { STELLAR_HOME: home });
+  const env = Object.assign({}, process.env, { STELLAR_BUILD_HOME: home });
   delete env.STELLAR_BUILD_NO_TRACE;
   delete env.STELLAR_LOOP_AUTORUN;
 
@@ -100,7 +100,7 @@ function scenarioResident() {
   fs.writeFileSync(transcript, '');
 
   console.log(`\nstellar-build learning loop — acceptance test`);
-  console.log(`  STELLAR_HOME = ${home}\n`);
+  console.log(`  STELLAR_BUILD_HOME = ${home}\n`);
 
   // --- Step A: skill mounts (PostToolUse:Skill). Should write a POINTER, not a trace. ---
   fs.writeFileSync(promptFile, OPENING_PROMPT);
@@ -202,14 +202,14 @@ function scenarioResident() {
   }
 
   if (failures === 0) { try { fs.rmSync(home, { recursive: true, force: true }); } catch (_) {} }
-  else console.log(`  (left STELLAR_HOME for inspection: ${home})`);
+  else console.log(`  (left STELLAR_BUILD_HOME for inspection: ${home})`);
 }
 
 // ===== Scenario 2: persona handoff mid-session rotates + closes the prior span. =====
 function scenarioHandoff() {
   console.log('\nScenario 2 — persona handoff (justin-analyst -> nicole-pm)\n');
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'stellar-loop-handoff-'));
-  const env = Object.assign({}, process.env, { STELLAR_HOME: home });
+  const env = Object.assign({}, process.env, { STELLAR_BUILD_HOME: home });
   delete env.STELLAR_BUILD_NO_TRACE;
   delete env.STELLAR_LOOP_AUTORUN;
 
@@ -253,7 +253,7 @@ function scenarioHandoff() {
   check('activation counter bumped once PER SPAN (=2), not per turn',
     state.traces_since_optimize === 2, `since_optimize=${state.traces_since_optimize}`);
 
-  if (!spans.length || failures) console.log(`  (left STELLAR_HOME for inspection: ${home})`);
+  if (!spans.length || failures) console.log(`  (left STELLAR_BUILD_HOME for inspection: ${home})`);
   else try { fs.rmSync(home, { recursive: true, force: true }); } catch (_) {}
 }
 

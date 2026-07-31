@@ -9,7 +9,7 @@
 //   session-end.js (SessionEnd)        -> closes the span: one kind:"span" record
 //
 // Everything is local, best-effort, and must never throw into a session.
-// Honors STELLAR_HOME (data root) just like the rest of the loop.
+// Honors STELLAR_BUILD_HOME (data root) just like the rest of the loop.
 'use strict';
 
 const fs = require('fs');
@@ -17,7 +17,7 @@ const path = require('path');
 const os = require('os');
 
 function homeDir() {
-  return process.env.STELLAR_HOME || path.join(os.homedir(), '.stellar');
+  return process.env.STELLAR_BUILD_HOME || path.join(os.homedir(), '.stellar-build');
 }
 
 // Filesystem-safe session id for use in file names.

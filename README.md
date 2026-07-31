@@ -21,6 +21,10 @@ curl -fsSL https://raw.githubusercontent.com/kaankacar/stellar-build/main/instal
 - **Launch phase.** Devnet to mainnet deploy plus 10 SCF grant lifecycle skills.
 - **Learning loop.** A local, private, **fully automatic** feedback loop (`learning-loop`, `optimize-skills`, `bench-skills`, `reprompt`) that auto-sharpens every prompt, traces how you use your skills, and retunes them in the background over time — hands-free. See [Learning loop](#learning-loop).
 
+**Live ground truth — Raven MCP:**
+
+The installer connects [Raven](https://raven.stellar.buzz) — the official hosted MCP server for the Stellar ecosystem — to Claude Code (user scope) and Codex (via `mcp-remote`). Raven exposes `search` (Stellar docs + ecosystem discovery) and `execute` (queries against live ecosystem data), and every DevRel persona is instructed to reach for it before asserting Stellar facts. OAuth sign-in happens on first use. To wire it manually: `claude mcp add --transport http stellar-raven "https://raven.stellar.buzz/mcp"`. (The playground on the Raven site is a demo of what it can do — agents connect to the MCP directly.)
+
 **Curated data layer:**
 
 - The full LumenLoop ecosystem catalog (728 projects, SCF rounds, audits, tokens)
@@ -139,9 +143,9 @@ adapted for markdown skills.
 
 ```
   every prompt ─▶ UserPromptSubmit hook auto-sharpens it (reprompter, automatic)
-                        + injects your learned profile (~/.stellar/profile.md)
+                        + injects your learned profile (~/.stellar-build/profile.md)
 
-   use skills ─▶ ~/.stellar/traces/*.jsonl     PostToolUse hook captures every skill run
+   use skills ─▶ ~/.stellar-build/traces/*.jsonl     PostToolUse hook captures every skill run
                        │                        (prompt paired via UserPromptSubmit hook)
                        │
         SessionStart hook: enough new usage? ──▶ auto-run  (DEFAULT, hands-free)
@@ -161,17 +165,17 @@ adapted for markdown skills.
 2. **Every skill run is traced**, locally.
 3. **Your skills auto-retune.** Once you've used skills enough since the last tune-up (default 20), a `SessionStart` hook **runs `/optimize-skills` for you in the background** — hands-free, the default. (If the `claude` CLI isn't on PATH, or you set `STELLAR_BUILD_AUTO_OPTIMIZE=0`, it falls back to a zero-cost nudge instead.)
 
-The optimizer also distils a profile of how you work into `~/.stellar/profile.md`, which feeds step 1 — so over time the loop sharpens your **prompts**, not just your skills.
+The optimizer also distils a profile of how you work into `~/.stellar-build/profile.md`, which feeds step 1 — so over time the loop sharpens your **prompts**, not just your skills.
 
 **The pieces:**
 
 - **Auto-reprompt.** `UserPromptSubmit` hook → sharpens every non-trivial prompt and injects `profile.md`. Skips slash commands and bare acks. Off with `STELLAR_BUILD_NO_REPROMPT=1`. Also available on demand as the `reprompt` skill ("reprompt this: …").
-- **Capture.** `PostToolUse` hook appends one truncated record per skill invocation to `~/.stellar/traces/<day>.jsonl`, paired with the triggering prompt. Fully local — no API calls, no telemetry. **Works in Claude Code and Codex** (same hooks registered in `~/.codex/hooks.json`); `stellar-loop ingest-codex` backfills older Codex sessions.
+- **Capture.** `PostToolUse` hook appends one truncated record per skill invocation to `~/.stellar-build/traces/<day>.jsonl`, paired with the triggering prompt. Fully local — no API calls, no telemetry. **Works in Claude Code and Codex** (same hooks registered in `~/.codex/hooks.json`); `stellar-loop ingest-codex` backfills older Codex sessions.
 - **Self-trigger.** `SessionStart` hook decides auto vs. nudge, with a cooldown so it never nags and a recursion guard so an auto-run never re-triggers itself.
 - **`/optimize-skills`.** Labels traces win/neutral/loss as an LLM judge, compiles the wins into sharper skills (tightened triggers + a delimited `Learned from your usage` block), and refreshes `profile.md`. Every edit is backed up and fully reversible.
 - **`/bench-skills`.** Scores skills against a held-out eval set with fixed seeds (`--max-samples`, `--seeds`) to measure the lift and catch regressions.
 
-**The `stellar-loop` CLI** (`~/.stellar/bin/stellar-loop`) handles the deterministic parts:
+**The `stellar-loop` CLI** (`~/.stellar-build/bin/stellar-loop`) handles the deterministic parts:
 
 ```bash
 stellar-loop status            # capture + auto-tune state, counts, since-last-tune
@@ -183,7 +187,7 @@ stellar-loop ingest-codex      # backfill skill usage from Codex session rollout
 stellar-loop clear [--all]     # delete traces (--all also clears backups)
 ```
 
-Add it to your PATH with `export PATH="$PATH:$HOME/.stellar/bin"`.
+Add it to your PATH with `export PATH="$PATH:$HOME/.stellar-build/bin"`.
 
 **Knobs (env):**
 
@@ -195,9 +199,9 @@ Add it to your PATH with `export PATH="$PATH:$HOME/.stellar/bin"`.
 | `STELLAR_BUILD_OPTIMIZE_COOLDOWN_HOURS` | `6` | minimum gap between tune-ups |
 | `STELLAR_BUILD_NO_LOOP` | off | `1` = disable the auto-trigger (keep manual `/optimize-skills`) |
 | `STELLAR_BUILD_NO_TRACE` | off | `1` = disable capture entirely |
-| `STELLAR_HOME` | `~/.stellar` | move the data root |
+| `STELLAR_BUILD_HOME` | `~/.stellar-build` | move the data root |
 
-**Privacy & control.** Everything lives under `~/.stellar/`. Result previews are truncated and mined examples are generalized before they ever land in a skill. `--uninstall` removes every hook (from both Claude and Codex), the CLI, and the trace store. `/optimize-skills` and `/bench-skills` themselves work in any agent that reads the skills.
+**Privacy & control.** Everything lives under `~/.stellar-build/`. Result previews are truncated and mined examples are generalized before they ever land in a skill. `--uninstall` removes every hook (from both Claude and Codex), the CLI, and the trace store. `/optimize-skills` and `/bench-skills` themselves work in any agent that reads the skills.
 
 ## Sandboxed / per-project install
 
@@ -225,6 +229,8 @@ curl -fsSL https://raw.githubusercontent.com/kaankacar/stellar-build/main/instal
 
 This re-runs the install, pulling fresh versions of all sources. Skills you've added manually to `~/.claude/skills/` from other places are untouched.
 
+> **Note (July 2026):** the config dir moved from `~/.stellar` to `~/.stellar-build` — the old location collided with the Stellar CLI's deprecated global config dir and triggered its deprecation notices. Updating migrates your manifest, traces, and learned profile automatically; anything else in `~/.stellar` (e.g. Stellar CLI files) is left untouched.
+
 ## Uninstall
 
 ```bash
@@ -232,7 +238,7 @@ This re-runs the install, pulling fresh versions of all sources. Skills you've a
 ./install.sh --uninstall --prefix=$(pwd)/my-project   # project-local
 ```
 
-The manifest at `~/.stellar/manifest.json` (or `$PREFIX/.stellar/manifest.json`) tracks every path and permission stellar-build touched, so uninstall reverses cleanly.
+The manifest at `~/.stellar-build/manifest.json` (or `$PREFIX/.stellar-build/manifest.json`) tracks every path and permission stellar-build touched, so uninstall reverses cleanly.
 
 ## Built on
 

@@ -27,16 +27,16 @@
 #   STELLAR_BUILD_NO_LOOP=1                disable the auto-trigger entirely
 #   STELLAR_BUILD_NO_TRACE=1               disable capture entirely
 #
-# Everything lives under $STELLAR_HOME (default ~/.stellar). Nothing leaves
+# Everything lives under $STELLAR_BUILD_HOME (default ~/.stellar-build). Nothing leaves
 # your machine.
 set -euo pipefail
 
-STELLAR_HOME="${STELLAR_HOME:-$HOME/.stellar}"
-TRACES="$STELLAR_HOME/traces"
-BACKUPS="$STELLAR_HOME/backups"
-BENCH="$STELLAR_HOME/bench"
-OPTLOG="$STELLAR_HOME/optimizations.jsonl"
-STATE="$STELLAR_HOME/state.json"
+STELLAR_BUILD_HOME="${STELLAR_BUILD_HOME:-$HOME/.stellar-build}"
+TRACES="$STELLAR_BUILD_HOME/traces"
+BACKUPS="$STELLAR_BUILD_HOME/backups"
+BENCH="$STELLAR_BUILD_HOME/bench"
+OPTLOG="$STELLAR_BUILD_HOME/optimizations.jsonl"
+STATE="$STELLAR_BUILD_HOME/state.json"
 CLAUDE_SKILLS="$HOME/.claude/skills"
 CODEX_SESSIONS="$HOME/.codex/sessions"
 
@@ -82,12 +82,12 @@ state_field() {
   fi
 }
 
-cmd_where() { ensure_dirs; say "$STELLAR_HOME"; }
+cmd_where() { ensure_dirs; say "$STELLAR_BUILD_HOME"; }
 
 cmd_status() {
   ensure_dirs
   head_ "stellar-build learning loop"
-  printf "  data dir      %s%s%s\n" "$C_C" "$STELLAR_HOME" "$C_R"
+  printf "  data dir      %s%s%s\n" "$C_C" "$STELLAR_BUILD_HOME" "$C_R"
   local capture="on"
   [ -n "${STELLAR_BUILD_NO_TRACE:-}" ] && capture="${C_Y}off (STELLAR_BUILD_NO_TRACE set)${C_R}"
   printf "  capture       %s\n" "$capture"
@@ -116,7 +116,7 @@ cmd_status() {
   # Auto-reprompt state (ON by default).
   local rp="${C_G}on (sharpens every prompt)${C_R}"
   case "${STELLAR_BUILD_NO_REPROMPT:-}" in 1|true|yes|on) rp="${C_Y}off (STELLAR_BUILD_NO_REPROMPT set)${C_R}";; esac
-  local prof="no profile yet"; [ -f "$STELLAR_HOME/profile.md" ] && prof="${C_G}profile.md learned${C_R}"
+  local prof="no profile yet"; [ -f "$STELLAR_BUILD_HOME/profile.md" ] && prof="${C_G}profile.md learned${C_R}"
   printf "  auto-reprompt %s  ${C_D}(%s)${C_R}\n" "$rp" "$prof"
 
   local codex="${C_Y}none yet${C_R}"
@@ -222,7 +222,7 @@ cmd_ingest_codex() {
     printf "  %sNo Codex sessions at %s.%s\n\n" "$C_D" "$CODEX_SESSIONS" "$C_R"
     return
   fi
-  local marker="$STELLAR_HOME/.codex_ingested"; touch "$marker"
+  local marker="$STELLAR_BUILD_HOME/.codex_ingested"; touch "$marker"
   local added=0 files=0 roll name ts sess out day
   day=$(date -u +%Y-%m-%d); out="$TRACES/$day.jsonl"
   while IFS= read -r roll; do

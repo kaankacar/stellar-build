@@ -14,7 +14,7 @@
 // The activation counter is NOT bumped here — it is bumped once per span at
 // SessionEnd, so the "20 activations" auto-trigger keeps its meaning.
 //
-// Fully local, best-effort. Opt out: STELLAR_BUILD_NO_TRACE=1. Root: STELLAR_HOME.
+// Fully local, best-effort. Opt out: STELLAR_BUILD_NO_TRACE=1. Root: STELLAR_BUILD_HOME.
 'use strict';
 
 const fs = require('fs');

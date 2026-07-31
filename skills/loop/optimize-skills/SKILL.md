@@ -1,6 +1,6 @@
 ---
 name: optimize-skills
-description: Compile your local stellar-build usage traces into sharper skills. Use when the user says "optimize my skills", "optimize-skills", "improve my skills from usage", "learn from my traces", "stellar-loop optimize", or wants the learning loop to refine installed skills based on how they've actually been used. DSPy-style prompt optimization over the local trace store at ~/.stellar/traces — fully local, reversible.
+description: Compile your local stellar-build usage traces into sharper skills. Use when the user says "optimize my skills", "optimize-skills", "improve my skills from usage", "learn from my traces", "stellar-loop optimize", or wants the learning loop to refine installed skills based on how they've actually been used. DSPy-style prompt optimization over the local trace store at ~/.stellar-build/traces — fully local, reversible.
 ---
 
 ## What this skill does
@@ -12,13 +12,13 @@ skill files: refined trigger descriptions, tightened instructions, and mined
 few-shot examples drawn from your own successful runs.
 
 Think of it in DSPy terms:
-- **Trainset** = your trace records in `~/.stellar/traces/*.jsonl`, grouped into
+- **Trainset** = your trace records in `~/.stellar-build/traces/*.jsonl`, grouped into
   **spans** (one continuous use of a skill within a session — see below)
 - **Metric** = an LLM-as-judge quality label you assign to each *span*
 - **Compile** = rewriting the skill's instructions + few-shot demos from the wins
 
 Everything is local and reversible. The original of every edited skill is backed
-up to `~/.stellar/backups/<skill>/SKILL.md.<timestamp>` before any change, and
+up to `~/.stellar-build/backups/<skill>/SKILL.md.<timestamp>` before any change, and
 `stellar-loop restore <skill>` undoes the last optimization.
 
 ## How to run it
@@ -30,7 +30,7 @@ Do these steps in order. Be conservative: this edits files the user relies on.
 Read the trace store:
 
 ```
-~/.stellar/traces/*.jsonl
+~/.stellar-build/traces/*.jsonl
 ```
 
 A skill *use* is a multi-turn **span**, not a single tool call, so records come
@@ -52,7 +52,7 @@ in three shapes — key off the `kind` field:
 many turns it spans. The `kind:"span"` record is the span's summary; the
 `kind:"turn"` records are its detail.
 
-If `STELLAR_HOME` is set in the environment, use that instead of `~/.stellar`.
+If `STELLAR_BUILD_HOME` is set in the environment, use that instead of `~/.stellar-build`.
 If there are no traces, tell the user to use some skills first (and confirm the
 hooks are registered — `stellar-loop status` shows this), then stop.
 
@@ -134,8 +134,8 @@ Rules for the learned block:
 Before writing any skill, copy the current file to a timestamped backup:
 
 ```
-mkdir -p ~/.stellar/backups/<skill>
-cp ~/.claude/skills/<skill>/SKILL.md ~/.stellar/backups/<skill>/SKILL.md.<UTC-timestamp>
+mkdir -p ~/.stellar-build/backups/<skill>
+cp ~/.claude/skills/<skill>/SKILL.md ~/.stellar-build/backups/<skill>/SKILL.md.<UTC-timestamp>
 ```
 
 Then write the improved `SKILL.md` to BOTH install locations if they exist:
@@ -145,7 +145,7 @@ Then write the improved `SKILL.md` to BOTH install locations if they exist:
 ### 5. Refresh the learned profile (feeds the auto-reprompter)
 
 Across ALL the traces (not per-skill), distill a short profile of how this user
-works and write it to `~/.stellar/profile.md` (honor `STELLAR_HOME`). The
+works and write it to `~/.stellar-build/profile.md` (honor `STELLAR_BUILD_HOME`). The
 per-turn auto-reprompter injects this into every prompt, so it's how the loop
 makes your *prompts* — not just your skills — get sharper over time.
 
@@ -161,7 +161,7 @@ too thin to say anything useful, write nothing rather than guessing.
 
 ### 6. Record the optimization
 
-Append one line per optimized skill to `~/.stellar/optimizations.jsonl`:
+Append one line per optimized skill to `~/.stellar-build/optimizations.jsonl`:
 
 ```json
 {"ts":"<UTC>","event":"optimized","skill":"<name>","traces_seen":<n>,"wins":<n>,"changed":["description","learned-block"],"backup":"<path>"}
@@ -176,7 +176,7 @@ undo. Recommend `/bench-skills` to measure whether the change actually helped.
 ## Guardrails
 
 - **Reversible always.** No edit without a fresh backup first.
-- **Local only.** Read only from `~/.stellar` and the installed skills. Never send
+- **Local only.** Read only from `~/.stellar-build` and the installed skills. Never send
   traces anywhere.
 - **Conservative.** When the signal is thin or ambiguous, leave the skill unchanged
   and say why. A skill that doesn't improve should not be touched.

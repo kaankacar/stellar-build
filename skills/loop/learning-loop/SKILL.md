@@ -15,7 +15,7 @@ Three moving parts:
    from "skill became active". A `PostToolUse:Skill` hook marks which skill is
    resident; a `Stop` hook records each turn's **real** assistant output; and a
    `SessionEnd` hook closes the span with a summary, counting it as one
-   activation. Everything lands in `~/.stellar/traces/<day>.jsonl`. Fully local.
+   activation. Everything lands in `~/.stellar-build/traces/<day>.jsonl`. Fully local.
    Opt out with `STELLAR_BUILD_NO_TRACE=1`.
 2. **Optimize** (`/optimize-skills`) — compiles those traces into sharper skills:
    tightened triggers/instructions and few-shot examples mined from your own
@@ -24,7 +24,7 @@ Three moving parts:
    measure whether an optimization actually helped.
 
 ```
-   use skills  ──▶  ~/.stellar/traces/*.jsonl
+   use skills  ──▶  ~/.stellar-build/traces/*.jsonl
                           │
               /optimize-skills  (DSPy-style compile)
                           │
@@ -43,7 +43,7 @@ Three moving parts:
   - `stellar-loop status` — install + capture + hook state, trace/optimization counts
   - `stellar-loop stats` — per-skill usage from local traces
   - `stellar-loop tail` — most recent trace records
-  The CLI is installed at `~/.stellar/bin/stellar-loop` (add `~/.stellar/bin` to
+  The CLI is installed at `~/.stellar-build/bin/stellar-loop` (add `~/.stellar-build/bin` to
   PATH, or call it by full path).
 - **"optimize" / "improve my skills"** → hand off to the `optimize-skills` skill.
 - **"benchmark" / "did it help"** → hand off to the `bench-skills` skill.
@@ -52,8 +52,8 @@ Three moving parts:
 
 ## Data & privacy
 
-- Everything lives under `~/.stellar/` (`traces/`, `backups/`, `bench/`,
-  `optimizations.jsonl`). Override the root with `STELLAR_HOME`.
+- Everything lives under `~/.stellar-build/` (`traces/`, `backups/`, `bench/`,
+  `optimizations.jsonl`). Override the root with `STELLAR_BUILD_HOME`.
 - Nothing is transmitted anywhere — no API calls, no telemetry. The "optimizer" is
   your own agent session reasoning over local files.
 - Result previews are truncated and examples are generalized before they ever land

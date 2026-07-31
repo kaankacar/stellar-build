@@ -1,6 +1,6 @@
 ---
 name: reprompt
-description: Rewrite a rough request into a sharp, structured prompt before acting on it. Use when the user says "reprompt this", "reprompt", "improve this prompt", "make this prompt better", "structure this request", or hands you a vague/underspecified ask you should sharpen first. Complements the automatic per-turn sharpener (the UserPromptSubmit hook) for explicit, heavier rewrites. Personalizes from ~/.stellar/profile.md when present.
+description: Rewrite a rough request into a sharp, structured prompt before acting on it. Use when the user says "reprompt this", "reprompt", "improve this prompt", "make this prompt better", "structure this request", or hands you a vague/underspecified ask you should sharpen first. Complements the automatic per-turn sharpener (the UserPromptSubmit hook) for explicit, heavier rewrites. Personalizes from ~/.stellar-build/profile.md when present.
 ---
 
 ## What this skill does
@@ -19,9 +19,9 @@ the preceding message if they just say "reprompt that").
 
 ### 2. Load any learned profile
 
-If `~/.stellar/profile.md` exists (the optimizer distills it from real usage),
+If `~/.stellar-build/profile.md` exists (the optimizer distills it from real usage),
 read it and treat it as defaults — domain, typical scope, preferred stack,
-tone — unless the request contradicts them. Honor `STELLAR_HOME` if set.
+tone — unless the request contradicts them. Honor `STELLAR_BUILD_HOME` if set.
 
 ### 3. Produce the sharpened spec
 
@@ -53,4 +53,4 @@ Don't make the user re-approve unless a clarifying answer is still pending.
   `UserPromptSubmit` hook and needs no invocation; turn it off with
   `STELLAR_BUILD_NO_REPROMPT=1`.
 - The more you use stellar-build, the better both get: `/optimize-skills`
-  refreshes `~/.stellar/profile.md` from your traces, which feeds these rewrites.
+  refreshes `~/.stellar-build/profile.md` from your traces, which feeds these rewrites.

@@ -72,3 +72,10 @@ Otherwise render `{agent.menu}` as a numbered table: `Code`, `Description`, `Act
 Dispatch on a clear match by invoking the item's `skill` or executing its `prompt`. Only pause to clarify when two or more items are genuinely close — one short question, not a confirmation ritual. When nothing on the menu fits, just continue the conversation; chat, clarifying questions, and `stellar-help` are always fair game.
 
 From here, Nicole stays active — persona, persistent facts, `{agent.icon}` prefix, and `{communication_language}` carry into every turn until the user dismisses him.
+
+## Stellar Ground Truth: Raven MCP
+
+For any Stellar-specific fact — protocol behavior, SDK/API details, SEPs, ecosystem projects, SCF history, live network data — prefer the **stellar-raven** MCP server over memory. It exposes two tools: `search` (Stellar docs + ecosystem discovery) and `execute` (queries against live ecosystem data). The bundled data layer under `data/` is a snapshot; Raven is the live source — use it to verify or refresh anything time-sensitive before building recommendations on it.
+
+- When the `stellar-raven` tools are available, use them before asserting Stellar facts, and ground your outputs in what you find.
+- If they are not available, suggest connecting them (once, briefly): `claude mcp add --transport http stellar-raven "https://raven.stellar.buzz/mcp"` — then continue with your best knowledge and flag unverified Stellar claims as such.

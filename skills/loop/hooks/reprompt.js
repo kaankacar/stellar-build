@@ -8,7 +8,7 @@
 // shapes how the turn is handled without replacing the user's words.
 //
 // The learning tie-in: if the optimizer has distilled a profile of how this
-// user works (~/.stellar/profile.md, written by /optimize-skills from real
+// user works (~/.stellar-build/profile.md, written by /optimize-skills from real
 // traces), it's injected too — so the rewrite gets more personalized over time.
 //
 // Skips trivial inputs, slash commands, and bare acknowledgements so it never
@@ -36,7 +36,7 @@ process.stdin.on('end', () => {
     if (prompt.length < 12) return;                        // too short to be worth structuring
     if (/^(y|yes|yep|ok|okay|k|go|sure|do it|continue|please|thanks|devam|evet|tamam|olur)\b/i.test(prompt)) return;
 
-    const home = process.env.STELLAR_HOME || path.join(os.homedir(), '.stellar');
+    const home = process.env.STELLAR_BUILD_HOME || path.join(os.homedir(), '.stellar-build');
     let profile = '';
     try {
       const pf = path.join(home, 'profile.md');

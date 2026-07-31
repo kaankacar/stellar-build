@@ -17,7 +17,7 @@ HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd 2>/dev/null)" || { ca
 
 command -v node >/dev/null 2>&1 || { cat >/dev/null 2>&1; exit 0; }
 
-ACTIVE_DIR="${STELLAR_HOME:-$HOME/.stellar}/.active"
+ACTIVE_DIR="${STELLAR_BUILD_HOME:-$HOME/.stellar-build}/.active"
 if ! ls "$ACTIVE_DIR"/*.json >/dev/null 2>&1; then
   cat >/dev/null 2>&1
   exit 0
