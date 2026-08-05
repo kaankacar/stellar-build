@@ -62,7 +62,7 @@ CLAUDE_SETTINGS="$PREFIX/.claude/settings.json"
 # Everything stellar-build ever writes into its config dir. Used to migrate
 # out of (and safely clean up) the legacy ~/.stellar without touching files
 # owned by the Stellar CLI.
-OWNED_CONFIG_ITEMS="manifest.json traces backups bench hooks bin cache .active .prompts profile.md optimizations.jsonl state.json .codex_ingested"
+OWNED_CONFIG_ITEMS="manifest.json traces backups bench hooks bin cache .active .prompts profile.md optimizations.jsonl state.json .codex_ingested config.yaml templates"
 
 # --- Manifest helpers ---
 read_manifest_array() {
@@ -347,6 +347,50 @@ if [ -d "$OUR_SRC/skills" ]; then
     cp -f "$OUR_SRC/skills/loop/bin/"* "$CONFIG_DIR/bin/" 2>/dev/null || true
     chmod +x "$CONFIG_DIR/bin/"* 2>/dev/null || true
   fi
+
+  # Global persona/workflow config — user-scoped defaults skills can read from
+  # any project, so a fresh folder needs zero per-project setup. Written once;
+  # never overwritten on update, so user edits survive. Project-level overrides
+  # live in {project}/.stellar-build/bmm/config.yaml (optional).
+  if [ ! -f "$CONFIG_DIR/config.yaml" ]; then
+    GIT_USER_NAME="$(git config --get user.name 2>/dev/null || true)"
+    {
+      cat <<'CFGEOF'
+# stellar-build global config. Skills read these values in any project that
+# has no .stellar-build/bmm/config.yaml of its own. Edit freely — updates
+# never overwrite this file.
+CFGEOF
+      if [ -n "$GIT_USER_NAME" ]; then
+        printf 'user_name: "%s"\n' "$GIT_USER_NAME"
+      fi
+      cat <<'CFGEOF'
+communication_language: English
+document_output_language: English
+user_skill_level: intermediate
+CFGEOF
+    } > "$CONFIG_DIR/config.yaml"
+    ok "Wrote global config ($CONFIG_DIR/config.yaml)"
+  fi
+
+  # Project-config template — personas copy this into a project when the user
+  # asks to "set up project config". Installer-owned: refreshed on update.
+  mkdir -p "$CONFIG_DIR/templates"
+  cat > "$CONFIG_DIR/templates/project-config.yaml" <<'TPLEOF'
+# stellar-build project config. Copy to {project}/.stellar-build/bmm/config.yaml
+# (any persona will do this for you if you ask to "set up project config").
+# Every key is optional — anything missing falls back to the global config at
+# ~/.stellar-build/config.yaml, then to built-in defaults. Paths resolve
+# relative to the project root.
+
+# project_name: my-project
+# planning_artifacts: docs                # PRDs, briefs, architecture, epics
+# implementation_artifacts: docs/stories  # stories, sprint-status.yaml
+# project_knowledge: docs                 # extra context skills may scan
+# user_name: Your Name                    # per-project override of the global value
+# communication_language: English
+# document_output_language: English
+# user_skill_level: intermediate
+TPLEOF
 fi
 
 # 2. SCF — upstream moved from flat .md files to folder-based skills

@@ -27,15 +27,13 @@ description: 'Execute story implementation following a context filled story spec
 
 ### Step 1: Resolve the Workflow Block
 
-Run: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow`
-
-**If the script fails**, resolve the `workflow` block yourself by reading these three files in base → team → user order and applying the same structural merge rules as the resolver:
+Resolve the `workflow` block by reading these three files in base → team → user order and applying the structural merge rules below:
 
 1. `{skill-root}/customize.toml` — defaults
 2. `{project-root}/.stellar-build/custom/{skill-name}.toml` — team overrides
 3. `{project-root}/.stellar-build/custom/{skill-name}.user.toml` — personal overrides
 
-Any missing file is skipped. Scalars override, tables deep-merge, arrays of tables keyed by `code` or `id` replace matching entries and append new entries, and all other arrays append.
+Any missing file is skipped — in a fresh project only the first exists. Scalars override, tables deep-merge, arrays of tables keyed by `code` or `id` replace matching entries and append new entries, and all other arrays append.
 
 ### Step 2: Execute Prepend Steps
 
@@ -47,7 +45,7 @@ Treat every entry in `{workflow.persistent_facts}` as foundational context you c
 
 ### Step 4: Load Config
 
-Load config from `{project-root}/.stellar-build/bmm/config.yaml` and resolve:
+Resolve config with a layered lookup: `{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`) if present, then `~/.stellar-build/config.yaml` (global, installer-written), then built-in defaults (`{user_name}` from `git config user.name`, languages English, `{user_skill_level}` intermediate, `{implementation_artifacts}` `{project-root}/docs/stories`). Never block on missing config files. Resolve:
 
 - `project_name`, `user_name`
 - `communication_language`, `document_output_language`
@@ -479,7 +477,7 @@ Activation is complete. Begin the workflow below.
       <action>Suggest checking {sprint_status} to see project progress</action>
     </check>
     <action>Remain flexible - allow user to choose their own path or ask for other assistance</action>
-  <action>Run: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow.on_complete` — if the resolved value is non-empty, follow it as the final terminal instruction before exiting.</action>
+  <action>Resolve `workflow.on_complete` from the customization files (base `{skill-root}/customize.toml`, then team/personal overrides under `{project-root}/.stellar-build/custom/`) — if the resolved value is non-empty, follow it as the final terminal instruction before exiting.</action>
   </step>
 
 </workflow>

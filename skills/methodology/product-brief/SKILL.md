@@ -15,11 +15,11 @@ At the opening greeting, let the user know they can invoke `party-mode` for mult
 
 ## On Activation
 
-1. Resolve customization: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow`. On failure, read `{skill-root}/customize.toml` directly and use defaults.
+1. Resolve customization: read `{skill-root}/customize.toml`, then merge team overrides from `{project-root}/.stellar-build/custom/product-brief.toml` and personal overrides from `product-brief.user.toml` beside it, if they exist (scalars override, tables deep-merge, arrays of tables keyed by `code`/`id` replace matching entries and append new ones, other arrays append).
 2. Execute each entry in `{workflow.activation_steps_prepend}` in order.
 3. Treat every entry in `{workflow.persistent_facts}` as foundational context for the rest of the run. Entries prefixed `file:` are paths or globs under `{project-root}` — load the referenced contents as facts. All other entries are facts verbatim.
 4. `{workflow.external_sources}` is an org-configured registry of internal tools (knowledge bases, MCP tools); consult them alongside generic web research on the same triggers in `## Discovery`, org tools preferred when their directive matches. If a named tool is unavailable at runtime, fall back to standard behavior and note the gap when relevant.
-5. Load `{project-root}/.stellar-build/bmm/config.yaml` (and `config.user.yaml` if present). Resolve `{user_name}`, `{communication_language}`, `{document_output_language}`, `{planning_artifacts}`, `{project_name}`, `{date}`.
+5. Load config layered: `{project-root}/.stellar-build/bmm/config.yaml` (and `config.user.yaml`) if present, else `~/.stellar-build/config.yaml` (global, installer-written). Resolve `{user_name}`, `{communication_language}`, `{document_output_language}`, `{planning_artifacts}`, `{project_name}`, `{date}`. Missing keys → neutral defaults (`{planning_artifacts}` → `{project-root}/docs`); never block.
 6. Greet `{user_name}` in `{communication_language}` — and stay in `{communication_language}` for every turn for the entire run, not just the greeting. Detect intent (create / update / validate). If interactive and intent is unclear, ask; for headless behavior see `## Headless Mode`.
 7. Execute each entry in `{workflow.activation_steps_append}` in order.
 

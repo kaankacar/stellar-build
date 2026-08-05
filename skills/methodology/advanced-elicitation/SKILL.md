@@ -35,13 +35,7 @@ When invoked from another prompt or process:
 
 ### Step 1: Method Registry Loading
 
-**Action:** Load `./methods.csv` for elicitation methods. If party-mode may participate, resolve the agent roster via:
-
-```bash
-python3 {project-root}/.stellar-build/scripts/resolve_config.py --project-root {project-root} --key agents
-```
-
-The resolver merges four layers in order: `.stellar-build/config.toml` (installer base, team-scoped), `.stellar-build/config.user.toml` (installer base, user-scoped), `.stellar-build/custom/config.toml` (team overrides), and `.stellar-build/custom/config.user.toml` (personal overrides). Each entry under `agents` is keyed by the agent's `code` and carries `name`, `title`, `icon`, `description`, `module`, and `team`.
+**Action:** Load `./methods.csv` for elicitation methods. If party-mode may participate, resolve the agent roster from the installed persona skills: list the sibling skill directories next to this one (`{skill-root}/..`) whose `customize.toml` contains an `[agent]` block (e.g. `justin-analyst`, `nicole-pm`, `kaan-ux-designer`, `tyler-architect`, `elliot-dev`, `bri-tech-writer`) and read each agent's `name`, `title`, `icon`, and `role`/`identity` from it, applying project overrides from `{project-root}/.stellar-build/custom/<skill>.toml` and `<skill>.user.toml` when present (scalars override, per the BMad merge rules).
 
 #### CSV Structure
 
