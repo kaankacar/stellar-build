@@ -22,8 +22,8 @@ When this skill completes, the user should:
 
 ## Data Sources
 
-- **Catalog**: `{project-root}/.stellar-build/_config/stellar-help.csv` — assembled manifest of all installed module skills
-- **Config**: `config.yaml` and `user-config.yaml` files in `{project-root}/.stellar-build/` and its subfolders — resolve `output-location` variables, provide `communication_language` and `project_knowledge`
+- **Catalog**: `stellar-help.csv` in this skill's directory (next to this SKILL.md) — the module-skill catalog shipped with this bundle. Cross-check against `skillPaths` in the install's `.stellar-build/manifest.json` (at `~/.stellar-build/manifest.json` for a global install; under the same prefix as this skills directory for sandboxed installs) and skip rows whose skill isn't actually installed (always keep `_meta` rows — they are module documentation pointers, not installable skills)
+- **Config**: layered per-key lookup (each key comes from the first source that defines it) — `{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`), then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then defaults (`{planning_artifacts}` → `{project-root}/docs`, `{implementation_artifacts}` → `{project-root}/docs/stories`) — resolves `output-location` variables, provides `communication_language` and `project_knowledge`
 - **Artifacts**: Files matching `outputs` patterns at resolved `output-location` paths reveal which steps are possibly completed; their content may also provide grounding context for recommendations
 - **Project knowledge**: If `project_knowledge` resolves to an existing path, read it for grounding context. Never fabricate project-specific details.
 - **Module docs**: Rows with `_meta` in the `skill` column carry a URL or path in `output-location` pointing to the module's documentation (e.g., llms.txt). Fetch and use these to answer general questions about that module.

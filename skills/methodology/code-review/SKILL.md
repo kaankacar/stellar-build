@@ -20,15 +20,13 @@ description: 'Review code changes adversarially using parallel review layers (Bl
 
 ### Step 1: Resolve the Workflow Block
 
-Run: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow`
-
-**If the script fails**, resolve the `workflow` block yourself by reading these three files in base → team → user order and applying the same structural merge rules as the resolver:
+Resolve the `workflow` block by reading these three files in base → team → user order and applying the structural merge rules below:
 
 1. `{skill-root}/customize.toml` — defaults
 2. `{project-root}/.stellar-build/custom/{skill-name}.toml` — team overrides
 3. `{project-root}/.stellar-build/custom/{skill-name}.user.toml` — personal overrides
 
-Any missing file is skipped. Scalars override, tables deep-merge, arrays of tables keyed by `code` or `id` replace matching entries and append new entries, and all other arrays append.
+Any missing file is skipped — in a fresh project only the first exists. Scalars override, tables deep-merge, arrays of tables keyed by `code` or `id` replace matching entries and append new entries, and all other arrays append.
 
 ### Step 2: Execute Prepend Steps
 
@@ -40,7 +38,7 @@ Treat every entry in `{workflow.persistent_facts}` as foundational context you c
 
 ### Step 4: Load Config
 
-Load config from `{project-root}/.stellar-build/bmm/config.yaml` and resolve:
+Resolve config with a layered per-key lookup (each key comes from the first source that defines it) (`{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`), then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then built-in defaults — `{planning_artifacts}` `{project-root}/docs`, `{implementation_artifacts}` `{project-root}/docs/stories`; never block on missing config files) and resolve:
 
 - `project_name`, `planning_artifacts`, `implementation_artifacts`, `user_name`
 - `communication_language`, `document_output_language`, `user_skill_level`

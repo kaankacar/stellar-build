@@ -203,6 +203,16 @@ Add it to your PATH with `export PATH="$PATH:$HOME/.stellar-build/bin"`.
 
 **Privacy & control.** Everything lives under `~/.stellar-build/`. Result previews are truncated and mined examples are generalized before they ever land in a skill. `--uninstall` removes every hook (from both Claude and Codex), the CLI, and the trace store. `/optimize-skills` and `/bench-skills` themselves work in any agent that reads the skills.
 
+## Configuration & customization
+
+Everything installs globally — skills work in any folder with **zero per-project setup**. Config resolves in layers; for each key, the first source that defines it wins:
+
+1. **Project** (optional): `{project}/.stellar-build/bmm/config.yaml` — project-scoped values like `planning_artifacts` (where PRDs, architecture, and epics land), `implementation_artifacts` (stories, sprint status), and `project_knowledge`. Nothing creates this automatically: ask any persona to *"set up project config"* and it scaffolds the file from the template at `~/.stellar-build/templates/project-config.yaml`.
+2. **Global**: `~/.stellar-build/config.yaml` — written once at install (your name from `git config user.name`, languages, skill level). Edit freely; updates never overwrite it. Sandboxed `--prefix` installs keep it under the prefix instead of `~`.
+3. **Built-in defaults**: `planning_artifacts` → `docs/`, `implementation_artifacts` → `docs/stories/`, language English.
+
+Per-skill behavior overrides live in each skill's `customize.toml` (shipped defaults, overwritten on update) and can be extended per project via `{project}/.stellar-build/custom/<skill>.toml` (team, committable) and `<skill>.user.toml` (personal) — merge rules are documented inside each skill.
+
 ## Sandboxed / per-project install
 
 You can install stellar-build into a specific project folder instead of your global `$HOME`. This is useful when you want the skills *scoped to one project*:

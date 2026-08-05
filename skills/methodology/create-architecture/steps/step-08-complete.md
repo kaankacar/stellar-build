@@ -77,6 +77,6 @@ The architecture will serve as the single source of truth for all technical deci
 
 ## On Complete
 
-Run: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow.on_complete`
+Resolve `workflow.on_complete` from the customization files: base `{skill-root}/customize.toml`, then team and personal overrides under `{project-root}/.stellar-build/custom/`, if present — last value wins.
 
 If the resolved `workflow.on_complete` is non-empty, follow it as the final terminal instruction before exiting.

@@ -1,0 +1,37 @@
+module,skill,display-name,menu-code,description,action,args,phase,preceded-by,followed-by,required,output-location,outputs
+bmm,_meta,BMad Method module,,Story-driven planning and delivery flow: analysis then planning then solutioning then implementation,,,,,,,https://github.com/kaankacar/stellar-build,
+bmm,stellar-help,BMad Help,HELP,Orient the user: where they are in the flow and what to run next,run,,anytime,,,false,,
+bmm,justin-analyst,Justin — Business Analyst,JA,"Analysis persona: brainstorming, research, and product-brief menus",persona menu,,anytime,,,false,,
+bmm,nicole-pm,Nicole — Product Manager,NP,Planning persona: PRD creation and requirements-discovery menus,persona menu,,anytime,,,false,,
+bmm,kaan-ux-designer,Kaan — UX Designer,KX,UX persona: UX design and specification menus,persona menu,,anytime,,,false,,
+bmm,tyler-architect,Tyler — Architect,TY,Solutioning persona: architecture and technical-design menus,persona menu,,anytime,,,false,,
+bmm,elliot-dev,Elliot — Developer,EL,Implementation persona: story execution and code menus,persona menu,,anytime,,,false,,
+bmm,bri-tech-writer,Bri — Tech Writer,BR,Documentation persona: docs and diagram menus,persona menu,,anytime,,,false,,
+bmm,party-mode,Party Mode,PM,Group discussion between installed personas,run,,anytime,,,false,,
+bmm,advanced-elicitation,Advanced Elicitation,AE,"Push recent output deeper: socratic, red team, pre-mortem",run,,anytime,,,false,,
+bmm,investigate,Investigate,IN,Forensic case investigation with evidence-graded findings,run,,anytime,,,false,{implementation_artifacts}/investigations,*-investigation.md
+bmm,brainstorming,Brainstorming,BS,Interactive ideation with creative techniques,run,,1-analysis,,product-brief,false,{planning_artifacts}/brainstorming,brainstorming-session-*.md
+bmm,product-brief,Product Brief,PB,One-pager that frames problem and product before a PRD,run,,1-analysis,brainstorming,prd,false,{planning_artifacts}/briefs,brief.md
+bmm,prfaq,PRFAQ / Working Backwards,WB,Battle-tested PRFAQ; optional distillate feeds the PRD,run,--headless,1-analysis,brainstorming,prd,false,{planning_artifacts},prfaq-*.md
+bmm,prd,PRD,PR,"Full PRD: create, update, or validate",run,,2-planning,product-brief;prfaq,create-ux-design;create-architecture,true,{planning_artifacts}/prds,prd.md
+bmm,create-ux-design,UX Design,UX,UX patterns and design specification,run,,2-planning,prd,create-architecture,false,{planning_artifacts},ux-design-specification.md
+bmm,create-architecture,Architecture,AR,Solution design decisions for AI-agent consistency,run,,3-solutioning,prd,create-epics-and-stories,true,{planning_artifacts},architecture.md
+bmm,create-epics-and-stories,Epics & Stories,ES,Break requirements into epics and sprint-ready stories,run,,3-solutioning,create-architecture,dev-story,true,{planning_artifacts},epics.md
+bmm,dev-story,Dev Story,DS,Implement the next story from the sprint plan,run,[story file],4-implementation,create-epics-and-stories,code-review,true,{implementation_artifacts},sprint-status.yaml
+bmm,code-review,Code Review,CR,Adversarial multi-layer review; back to DS if fixes needed,run,,4-implementation,dev-story,,false,{implementation_artifacts},deferred-work.md
+stellar,_meta,Stellar journey,,From idea to mainnet: discover then build then launch,,,,,,,https://developers.stellar.org,
+stellar,find-stellar-idea,Find an Idea,FI,Discover what to build on Stellar (grounded in ecosystem gaps),run,,1-idea,,stellar-competitive-landscape;product-brief,false,,
+stellar,stellar-competitive-landscape,Competitive Landscape,CL,Map similar Stellar projects and differentiation for an idea,run,,1-idea,find-stellar-idea,prd,false,,
+stellar,smart-contracts,Smart Contracts,SC,Write / test / secure Soroban contracts,run,,2-build,,deploy-stellar-mainnet,false,,
+stellar,dapp,dApp / Frontend,DA,Build the client that talks to Stellar (SDK + wallets),run,,2-build,,deploy-stellar-mainnet,false,,
+stellar,data,Chain Data,CD,Query Stellar data via RPC / Horizon,run,,2-build,,,false,,
+stellar,deploy-stellar-mainnet,Mainnet Deploy,MD,Devnet to mainnet checklist and deployment,run,,3-launch,smart-contracts,scf-interest-form-drafter,false,,
+scf,_meta,Stellar Community Fund module,,SCF Build Award grant lifecycle: apply then submit then deliver,,,,,,,https://communityfund.stellar.org,
+scf,scf-round-watcher,SCF Round Watcher,RW,Current round status and activity,run,,anytime,,,false,,
+scf,scf-interest-form-drafter,SCF Interest Form,IF,Draft the interest form that earns a full-submission invite,run,,1-apply,,scf-referral-preparer;scf-submission-drafter,false,,
+scf,scf-referral-preparer,SCF Referral Package,RP,Prepare materials for an SCF referral,run,,1-apply,scf-interest-form-drafter,scf-submission-drafter,false,,
+scf,scf-submission-drafter,SCF Submission Draft,SD,Draft the full Build Award application interactively,run,,2-submit,scf-interest-form-drafter,scf-budget-builder,true,,
+scf,scf-competitor-analyst,SCF Competitor Analysis,CA,Competitive landscape section for a submission,run,,2-submit,scf-submission-drafter,scf-prescreen-checker,false,,
+scf,scf-budget-builder,SCF Budget,BU,Validate and structure the submission budget,run,,2-submit,scf-submission-drafter,scf-prescreen-checker,false,,
+scf,scf-prescreen-checker,SCF Prescreen Check,PC,Simulate the SCF prescreen before the round closes,run,,2-submit,scf-budget-builder,,false,,
+scf,scf-tranche-reporter,SCF Tranche Report,TR,Document tranche deliverables to unlock the next payment,run,,3-deliver,scf-submission-drafter,,false,,

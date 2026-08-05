@@ -78,6 +78,6 @@ purpose: "Token-efficient context for downstream PRD creation"
 
 This is the terminal stage. If the user wants to revise, loop back to the relevant stage. Otherwise, the workflow is done.
 
-Run: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow.on_complete`
+Resolve `workflow.on_complete` from the customization files: base `{skill-root}/customize.toml`, then team and personal overrides under `{project-root}/.stellar-build/custom/`, if present — last value wins.
 
 If the resolved `workflow.on_complete` is non-empty, follow it as the final terminal instruction before exiting.

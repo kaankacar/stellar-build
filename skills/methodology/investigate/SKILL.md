@@ -52,9 +52,13 @@ After every outcome, present what was learned and pause for the user before cont
 
 ### Step 1: Resolve the workflow block
 
-Run: `python3 {project-root}/.stellar-build/scripts/resolve_customization.py --skill {skill-root} --key workflow`
+Resolve the `workflow` block by reading these three files in base → team → user order and applying the structural merge rules below:
 
-If the script fails, stop and surface the error.
+1. `{skill-root}/customize.toml` — defaults
+2. `{project-root}/.stellar-build/custom/investigate.toml` — team overrides
+3. `{project-root}/.stellar-build/custom/investigate.user.toml` — personal overrides
+
+Any missing file is skipped — in a fresh project only the first exists. Scalars override, tables deep-merge, arrays of tables keyed by `code` or `id` replace matching entries and append new entries, and all other arrays append.
 
 ### Step 2: Execute prepend steps
 
@@ -67,9 +71,11 @@ Treat each entry in `{workflow.persistent_facts}` as foundational context. `file
 
 ### Step 4: Load config
 
-Load `{project-root}/.stellar-build/bmm/config.yaml` and resolve `{user_name}`, `{communication_language}`,
-`{document_output_language}`, `{implementation_artifacts}`, `{project_knowledge}`. If `{implementation_artifacts}` is
-unresolved, fall back to `./investigations/` and surface the fallback before initializing.
+Resolve `{user_name}`, `{communication_language}`, `{document_output_language}`, `{implementation_artifacts}`,
+`{project_knowledge}` with a layered per-key lookup (each key comes from the first source that defines it): `{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`), then
+`~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then defaults. Never block on missing config files. If
+`{implementation_artifacts}` is unresolved, fall back to `./investigations/` and surface the fallback before
+initializing.
 
 ### Step 5: Greet
 
