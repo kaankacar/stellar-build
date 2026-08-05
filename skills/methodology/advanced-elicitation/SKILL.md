@@ -35,7 +35,7 @@ When invoked from another prompt or process:
 
 ### Step 1: Method Registry Loading
 
-**Action:** Load `./methods.csv` for elicitation methods. If party-mode may participate, resolve the agent roster from the installed persona skills: list the sibling skill directories next to this one (`{skill-root}/..`) whose `customize.toml` contains an `[agent]` block (e.g. `justin-analyst`, `nicole-pm`, `kaan-ux-designer`, `tyler-architect`, `elliot-dev`, `bri-tech-writer`) and read each agent's `name`, `title`, `icon`, and `role`/`identity` from it, applying project overrides from `{project-root}/.stellar-build/custom/<skill>.toml` and `<skill>.user.toml` when present (scalars override, per the BMad merge rules).
+**Action:** Load `./methods.csv` for elicitation methods. If party-mode may participate, resolve the agent roster from the installed persona skills: list the sibling skill directories next to this one (`{skill-root}/..`) whose `customize.toml` contains an `[agent]` block (e.g. `justin-analyst`, `nicole-pm`, `kaan-ux-designer`, `tyler-architect`, `elliot-dev`, `bri-tech-writer`) and read each agent's `name`, `title`, `icon`, and `role`/`identity` from it, applying project overrides from `{project-root}/.stellar-build/custom/<skill>.toml` and `<skill>.user.toml` when present (scalars override, per the BMad merge rules; `name` and `title` stay fixed from the base persona).
 
 #### CSV Structure
 

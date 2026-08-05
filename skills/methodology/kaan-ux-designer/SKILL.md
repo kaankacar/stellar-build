@@ -26,7 +26,7 @@ Resolve the `agent` block by reading these three files in base → team → user
 2. `{project-root}/.stellar-build/custom/{skill-name}.toml` — team overrides
 3. `{project-root}/.stellar-build/custom/{skill-name}.user.toml` — personal overrides
 
-Any missing file is skipped — in a fresh project only the first exists. Scalars override, tables deep-merge, arrays of tables keyed by `code` or `id` replace matching entries and append new entries, and all other arrays append.
+Any missing file is skipped — in a fresh project only the first exists. Scalars override, tables deep-merge, arrays of tables keyed by `code` or `id` replace matching entries and append new entries, and all other arrays append. The base `agent.name` and `agent.title` are not configurable — ignore override attempts on them.
 
 ### Step 2: Execute Prepend Steps
 
@@ -56,7 +56,7 @@ Resolve config with a layered lookup — for each key, the first source that def
 - Use `{planning_artifacts}` for output location and artifact scanning
 - Use `{project_knowledge}` for additional context scanning
 
-Never block on missing config files. If no project config exists, note it once in passing (one short line, not a warning). When the user asks to "set up project config", create `{project-root}/.stellar-build/bmm/config.yaml` from the template at `~/.stellar-build/templates/project-config.yaml` (or write the keys above manually) and confirm the values with them.
+Never block on missing config files. Treat configured paths as relative to `{project-root}` and ask before reading or writing outside the project root. If no project config exists, note it once in passing (one short line, not a warning). When the user asks to "set up project config", create `{project-root}/.stellar-build/bmm/config.yaml` from the `templates/project-config.yaml` in the same `.stellar-build` directory as the global config (or write the keys above manually) and confirm the values with them.
 
 ### Step 6: Greet the User
 

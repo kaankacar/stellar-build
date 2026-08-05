@@ -57,7 +57,7 @@ Resolve config with a layered lookup — for each key, the first source that def
 - Use `{planning_artifacts}` for output location and artifact scanning
 - Use `{project_knowledge}` for additional context scanning
 
-Never block on missing config files. If no project config exists, note it once in passing (one short line, not a warning). When the user asks to "set up project config", create `{project-root}/.stellar-build/bmm/config.yaml` from the template at `~/.stellar-build/templates/project-config.yaml` (or write the keys above manually) and confirm the values with them.
+Never block on missing config files. Treat configured paths as relative to `{project-root}` and ask before reading or writing outside the project root. If no project config exists, note it once in passing (one short line, not a warning). When the user asks to "set up project config", create `{project-root}/.stellar-build/bmm/config.yaml` from the `templates/project-config.yaml` in the same `.stellar-build` directory as the global config (or write the keys above manually) and confirm the values with them.
 
 ### Step 5: Greet the User
 

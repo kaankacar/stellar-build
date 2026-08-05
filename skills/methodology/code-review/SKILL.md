@@ -38,7 +38,7 @@ Treat every entry in `{workflow.persistent_facts}` as foundational context you c
 
 ### Step 4: Load Config
 
-Resolve config with a layered lookup (`{project-root}/.stellar-build/bmm/config.yaml` if present, then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then built-in defaults — `{planning_artifacts}` `{project-root}/docs`, `{implementation_artifacts}` `{project-root}/docs/stories`; never block on missing config files) and resolve:
+Resolve config with a layered per-key lookup (each key comes from the first source that defines it) (`{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`), then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then built-in defaults — `{planning_artifacts}` `{project-root}/docs`, `{implementation_artifacts}` `{project-root}/docs/stories`; never block on missing config files) and resolve:
 
 - `project_name`, `planning_artifacts`, `implementation_artifacts`, `user_name`
 - `communication_language`, `document_output_language`, `user_skill_level`

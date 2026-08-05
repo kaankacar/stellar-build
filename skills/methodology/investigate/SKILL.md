@@ -72,7 +72,7 @@ Treat each entry in `{workflow.persistent_facts}` as foundational context. `file
 ### Step 4: Load config
 
 Resolve `{user_name}`, `{communication_language}`, `{document_output_language}`, `{implementation_artifacts}`,
-`{project_knowledge}` with a layered lookup: `{project-root}/.stellar-build/bmm/config.yaml` if present, then
+`{project_knowledge}` with a layered per-key lookup (each key comes from the first source that defines it): `{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`), then
 `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then defaults. Never block on missing config files. If
 `{implementation_artifacts}` is unresolved, fall back to `./investigations/` and surface the fallback before
 initializing.

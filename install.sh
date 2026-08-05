@@ -377,12 +377,11 @@ CFGEOF
   # Project-config template — personas copy this into a project when the user
   # asks to "set up project config". Installer-owned: refreshed on update.
   mkdir -p "$CONFIG_DIR/templates"
-  cat > "$CONFIG_DIR/templates/project-config.yaml" <<'TPLEOF'
+  cat > "$CONFIG_DIR/templates/project-config.yaml" <<TPLEOF
 # stellar-build project config. Copy to {project}/.stellar-build/bmm/config.yaml
 # (any persona will do this for you if you ask to "set up project config").
-# Every key is optional — anything missing falls back to the install's global
-# config (~/.stellar-build/config.yaml for a default home install; under the
-# install prefix for sandboxed installs), then to built-in defaults. Paths
+# Every key is optional — anything missing falls back to this install's global
+# config at ${CONFIG_DIR}/config.yaml, then to built-in defaults. Paths
 # resolve relative to the project root.
 
 # project_name: my-project

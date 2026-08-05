@@ -22,11 +22,11 @@ Party mode accepts optional arguments when invoked:
 
 1. **Parse arguments** — check for `--model` and `--solo` flags from the user's invocation.
 
-2. Resolve config with a layered lookup — `{project-root}/.stellar-build/bmm/config.yaml` if present, then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then defaults (`{user_name}` from `git config user.name`, `{communication_language}` English; never block on missing config files) — and resolve:
+2. Resolve config with a layered per-key lookup (each key comes from the first source that defines it) — `{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`), then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then defaults (`{user_name}` from `git config user.name`, `{communication_language}` English; never block on missing config files) — and resolve:
   - Use `{user_name}` for greeting
   - Use `{communication_language}` for all communications
 
-3. **Resolve the agent roster** from the installed persona skills: list the sibling skill directories next to this one (`{skill-root}/..`) whose `customize.toml` contains an `[agent]` block (e.g. `justin-analyst`, `nicole-pm`, `kaan-ux-designer`, `tyler-architect`, `elliot-dev`, `bri-tech-writer`) and read each agent's `name`, `title`, `icon`, and `role`/`identity`/`communication_style` from it. Apply project overrides from `{project-root}/.stellar-build/custom/<skill>.toml` and `<skill>.user.toml` when present (scalars override, per the BMad merge rules). Build an internal roster of available agents from those fields.
+3. **Resolve the agent roster** from the installed persona skills: list the sibling skill directories next to this one (`{skill-root}/..`) whose `customize.toml` contains an `[agent]` block (e.g. `justin-analyst`, `nicole-pm`, `kaan-ux-designer`, `tyler-architect`, `elliot-dev`, `bri-tech-writer`) and read each agent's `name`, `title`, `icon`, and `role`/`identity`/`communication_style` from it. Apply project overrides from `{project-root}/.stellar-build/custom/<skill>.toml` and `<skill>.user.toml` when present (scalars override, per the BMad merge rules; `name` and `title` stay fixed from the base persona). Build an internal roster of available agents from those fields.
 
 4. **Load project context** — search for `**/project-context.md`. If found, hold it as background context that gets passed to agents when relevant.
 
