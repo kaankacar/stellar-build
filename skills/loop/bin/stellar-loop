@@ -14,6 +14,7 @@
 #   stellar-loop bench [skill]       measure skill quality (before/after)
 #   stellar-loop restore <skill>     undo the last optimization for a skill
 #   stellar-loop ingest-codex        backfill skill usage from Codex rollouts
+#   stellar-loop raven [login]       check / fix the Raven MCP sign-in
 #   stellar-loop clear [--all]       delete traces (--all also clears backups)
 #   stellar-loop where               print the data directory
 #
@@ -82,6 +83,136 @@ state_field() {
   fi
 }
 
+# --- Raven MCP (raven.stellar.buzz) ---------------------------------------
+# Raven is OAuth-gated (authorization_code + PKCE only — no service tokens), so
+# every machine needs a one-time browser sign-in. Registering the server is NOT
+# the same as being signed in, and the two runtimes keep separate token stores,
+# so we check and fix them independently:
+#   Claude Code  own credential store; `claude mcp get` is health-checked, so
+#                "Connected" means the token actually works.
+#   Codex        reaches HTTP MCP through the `mcp-remote` bridge, which caches
+#                tokens under ~/.mcp-auth.
+RAVEN_URL="https://raven.stellar.buzz/mcp"
+RAVEN_HOST="raven.stellar.buzz"
+MCP_AUTH_DIR="$HOME/.mcp-auth"
+
+# connected | needs-auth | not-configured | no-cli
+raven_claude_state() {
+  command -v claude >/dev/null 2>&1 || { echo "no-cli"; return; }
+  local out
+  out="$(claude mcp get stellar-raven 2>&1)" || { echo "not-configured"; return; }
+  case "$out" in
+    *Connected*) echo "connected" ;;
+    *"No MCP server"*|*"not found"*) echo "not-configured" ;;
+    *) echo "needs-auth" ;;
+  esac
+}
+
+# mcp-remote keys its token cache by a hash of the server URL, so count the
+# cached token files rather than parsing a scheme we don't own.
+mcp_auth_token_count() {
+  [ -d "$MCP_AUTH_DIR" ] || { echo 0; return; }
+  find "$MCP_AUTH_DIR" -name '*tokens*.json' 2>/dev/null | wc -l | tr -d ' '
+}
+
+# connected | needs-auth | unknown | not-configured
+raven_codex_state() {
+  grep -q '\[mcp_servers\.stellar-raven\]' "$HOME/.codex/config.toml" 2>/dev/null \
+    || { echo "not-configured"; return; }
+  if [ ! -d "$MCP_AUTH_DIR" ]; then echo "needs-auth"; return; fi
+  # Definitive when the cache names the host; otherwise a cache exists but we
+  # can't attribute it to Raven — say so instead of guessing.
+  grep -rql "$RAVEN_HOST" "$MCP_AUTH_DIR" 2>/dev/null && { echo "connected"; return; }
+  [ "$(mcp_auth_token_count)" = "0" ] && { echo "needs-auth"; return; }
+  echo "unknown"
+}
+
+raven_label() {
+  case "$1" in
+    connected)      printf "%sconnected%s" "$C_G" "$C_R" ;;
+    needs-auth)     printf "%sneeds sign-in%s" "$C_Y" "$C_R" ;;
+    unknown)        printf "%sunknown%s" "$C_D" "$C_R" ;;
+    not-configured) printf "%snot configured%s" "$C_D" "$C_R" ;;
+    no-cli)         printf "%sno claude CLI%s" "$C_D" "$C_R" ;;
+  esac
+}
+
+cmd_raven() {
+  case "${1:-status}" in
+    status) raven_status ;;
+    login|auth|signin) raven_login "${2:-}" ;;
+    *) printf "Usage: stellar-loop raven [status|login]\n"; exit 1 ;;
+  esac
+}
+
+raven_status() {
+  local c x; c="$(raven_claude_state)"; x="$(raven_codex_state)"
+  head_ "Raven MCP  ${C_D}($RAVEN_URL)${C_R}"
+  printf "  claude code   %s\n" "$(raven_label "$c")"
+  printf "  codex         %s\n" "$(raven_label "$x")"
+  if [ "$c" = "needs-auth" ] || [ "$x" = "needs-auth" ]; then
+    printf "\n  %sSign in:%s stellar-loop raven login   ${C_D}(one-time, opens a browser)${C_R}\n" "$C_B" "$C_R"
+  fi
+  echo
+}
+
+# One-time OAuth sign-in. Headless/SSH sessions get a pasteable URL instead of
+# a browser that can't open.
+raven_login() {
+  local only="${1:-}" flag=""
+  if [ -n "${SSH_CONNECTION:-}${SSH_TTY:-}${STELLAR_BUILD_NO_BROWSER:-}" ]; then flag="--no-browser"; fi
+
+  if [ "$only" != "codex" ]; then
+    local c; c="$(raven_claude_state)"
+    case "$c" in
+      connected) printf "  %s✓%s Claude Code already signed in\n" "$C_G" "$C_R" ;;
+      no-cli)    printf "  %s!%s Claude CLI not on PATH — skipping Claude Code\n" "$C_Y" "$C_R" ;;
+      not-configured)
+        printf "  %s!%s Raven not registered — adding it\n" "$C_Y" "$C_R"
+        claude mcp add --transport http --scope user stellar-raven "$RAVEN_URL" >/dev/null 2>&1 || true
+        claude mcp login stellar-raven $flag || printf "  %s!%s Sign-in failed\n" "$C_Y" "$C_R" ;;
+      *)
+        printf "  %s▸%s Signing in to Raven for Claude Code...\n" "$C_G" "$C_R"
+        claude mcp login stellar-raven $flag || printf "  %s!%s Sign-in failed — retry: claude mcp login stellar-raven\n" "$C_Y" "$C_R" ;;
+    esac
+  fi
+
+  if [ "$only" != "claude" ]; then
+    local x; x="$(raven_codex_state)"
+    case "$x" in
+      connected) printf "  %s✓%s Codex already signed in\n" "$C_G" "$C_R" ;;
+      not-configured) printf "  %s!%s Raven not in ~/.codex/config.toml — re-run the installer\n" "$C_Y" "$C_R" ;;
+      *) raven_login_codex ;;
+    esac
+  fi
+  echo
+}
+
+# mcp-remote stays resident as a proxy after the OAuth dance, so run it in the
+# background, wait for a new token to land, then stop it.
+raven_login_codex() {
+  if ! command -v npx >/dev/null 2>&1; then
+    printf "  %s!%s npx not found — Codex sign-in needs Node. Then: npx -y mcp-remote %s\n" "$C_Y" "$C_R" "$RAVEN_URL"
+    return
+  fi
+  printf "  %s▸%s Signing in to Raven for Codex (mcp-remote)...\n" "$C_G" "$C_R"
+  local before; before="$(mcp_auth_token_count)"
+  npx -y mcp-remote "$RAVEN_URL" >/dev/null 2>&1 &
+  local pid=$! i=0
+  while [ "$i" -lt 120 ]; do
+    kill -0 "$pid" 2>/dev/null || break
+    [ "$(mcp_auth_token_count)" -gt "$before" ] && break
+    sleep 1; i=$((i + 1))
+  done
+  kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  if [ "$(mcp_auth_token_count)" -gt "$before" ]; then
+    printf "  %s✓%s Codex signed in\n" "$C_G" "$C_R"
+  else
+    printf "  %s!%s Timed out — finish it manually: npx -y mcp-remote %s\n" "$C_Y" "$C_R" "$RAVEN_URL"
+  fi
+}
+
 cmd_where() { ensure_dirs; say "$STELLAR_BUILD_HOME"; }
 
 cmd_status() {
@@ -122,6 +253,15 @@ cmd_status() {
   local codex="${C_Y}none yet${C_R}"
   [ -d "$CODEX_SESSIONS" ] && codex="${C_G}sessions present${C_R} ${C_D}(stellar-loop ingest-codex to backfill)${C_R}"
   printf "  codex         %s\n" "$codex"
+
+  # Raven is what the personas use for ground truth, and registering it is not
+  # the same as being signed in — surface that here rather than at first 401.
+  local rc; rc="$(raven_claude_state)"
+  local rx; rx="$(raven_codex_state)"
+  printf "  raven mcp     claude %s · codex %s\n" "$(raven_label "$rc")" "$(raven_label "$rx")"
+  if [ "$rc" = "needs-auth" ] || [ "$rx" = "needs-auth" ]; then
+    printf "                %s→ stellar-loop raven login%s\n" "$C_Y" "$C_R"
+  fi
 
   printf "\n  %sNext:%s stellar-loop stats   ·   /optimize-skills   ·   /bench-skills\n\n" "$C_D" "$C_R"
 }
@@ -244,7 +384,7 @@ cmd_ingest_codex() {
 }
 
 usage() {
-  sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 cmd="${1:-status}"; shift || true
@@ -257,6 +397,7 @@ case "$cmd" in
   restore)  cmd_restore "${1:-}" ;;
   clear)    cmd_clear "${1:-}" ;;
   ingest-codex) cmd_ingest_codex ;;
+  raven)    cmd_raven "$@" ;;
   where)    cmd_where ;;
   help|-h|--help) usage ;;
   *) printf "Unknown command: %s\n\n" "$cmd"; usage; exit 1 ;;

@@ -521,6 +521,46 @@ if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
   fi
 fi
 
+# Registering the server is not the same as being signed in. Raven is OAuth-gated
+# (authorization_code + PKCE only — no service tokens), so without this check the
+# user finds out at the first 401, mid-task. `claude mcp get` is health-checked,
+# so "Connected" means the stored token actually works. We offer the one-time
+# browser sign-in here, while they're still at the terminal — but only when
+# there's a real TTY, so piped/CI installs stay non-interactive.
+if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
+  if claude mcp get stellar-raven 2>/dev/null | grep -q "Connected"; then
+    ok "Raven signed in for Claude Code"
+  elif [ -n "${STELLAR_BUILD_NO_RAVEN_LOGIN:-}" ]; then
+    warn "Raven needs a one-time sign-in: stellar-loop raven login"
+  elif [ -t 1 ] && [ -r /dev/tty ]; then
+    # curl | bash leaves stdin pointed at the script, so read from the terminal.
+    printf "\n  %s?%s Raven needs a one-time sign-in. Do it now (opens a browser)? %s[Y/n]%s " \
+      "$CYAN" "$RESET" "$DIM" "$RESET"
+    RAVEN_REPLY=""
+    read -r RAVEN_REPLY < /dev/tty || RAVEN_REPLY=""
+    case "$RAVEN_REPLY" in
+      n|N|no|NO|No)
+        warn "Skipped — run 'stellar-loop raven login' when you're ready" ;;
+      *)
+        # SSH sessions can't open a browser; --no-browser prints a pasteable URL.
+        RAVEN_LOGIN_FLAG=""
+        [ -n "${SSH_CONNECTION:-}${SSH_TTY:-}" ] && RAVEN_LOGIN_FLAG="--no-browser"
+        if claude mcp login stellar-raven $RAVEN_LOGIN_FLAG </dev/tty; then
+          ok "Raven signed in for Claude Code"
+        else
+          warn "Sign-in didn't complete — retry any time: stellar-loop raven login"
+        fi ;;
+    esac
+  else
+    warn "Raven needs a one-time sign-in: stellar-loop raven login"
+  fi
+fi
+# Codex authenticates through mcp-remote's own cache (~/.mcp-auth) and stays
+# resident once started, so we don't drive that flow from the installer.
+if $RAVEN_CODEX && [ ! -d "$PREFIX/.mcp-auth" ]; then
+  warn "Codex needs its own Raven sign-in: stellar-loop raven login codex"
+fi
+
 # --- Manifest ---
 SKILL_PATHS_JSON=""
 for s in $FOLDER_SKILLS; do
