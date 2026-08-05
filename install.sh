@@ -353,7 +353,9 @@ if [ -d "$OUR_SRC/skills" ]; then
   # never overwritten on update, so user edits survive. Project-level overrides
   # live in {project}/.stellar-build/bmm/config.yaml (optional).
   if [ ! -f "$CONFIG_DIR/config.yaml" ]; then
-    GIT_USER_NAME="$(git config --get user.name 2>/dev/null || true)"
+    # Escape backslashes and double quotes so the name is always valid YAML;
+    # keep only the first line in case of a pathological multi-line value.
+    GIT_USER_NAME="$(git config --get user.name 2>/dev/null | head -n1 | sed 's/\\/\\\\/g; s/"/\\"/g' || true)"
     {
       cat <<'CFGEOF'
 # stellar-build global config. Skills read these values in any project that
@@ -378,9 +380,10 @@ CFGEOF
   cat > "$CONFIG_DIR/templates/project-config.yaml" <<'TPLEOF'
 # stellar-build project config. Copy to {project}/.stellar-build/bmm/config.yaml
 # (any persona will do this for you if you ask to "set up project config").
-# Every key is optional — anything missing falls back to the global config at
-# ~/.stellar-build/config.yaml, then to built-in defaults. Paths resolve
-# relative to the project root.
+# Every key is optional — anything missing falls back to the install's global
+# config (~/.stellar-build/config.yaml for a default home install; under the
+# install prefix for sandboxed installs), then to built-in defaults. Paths
+# resolve relative to the project root.
 
 # project_name: my-project
 # planning_artifacts: docs                # PRDs, briefs, architecture, epics

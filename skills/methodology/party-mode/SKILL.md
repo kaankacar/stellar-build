@@ -22,7 +22,7 @@ Party mode accepts optional arguments when invoked:
 
 1. **Parse arguments** — check for `--model` and `--solo` flags from the user's invocation.
 
-2. Resolve config with a layered lookup — `{project-root}/.stellar-build/bmm/config.yaml` if present, then `~/.stellar-build/config.yaml` (global, installer-written), then defaults (`{user_name}` from `git config user.name`, `{communication_language}` English; never block on missing config files) — and resolve:
+2. Resolve config with a layered lookup — `{project-root}/.stellar-build/bmm/config.yaml` if present, then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then defaults (`{user_name}` from `git config user.name`, `{communication_language}` English; never block on missing config files) — and resolve:
   - Use `{user_name}` for greeting
   - Use `{communication_language}` for all communications
 

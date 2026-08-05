@@ -32,7 +32,7 @@ This uses **micro-file architecture** for disciplined execution:
 
 ### Configuration Loading
 
-Resolve config with a layered lookup: `{project-root}/.stellar-build/bmm/config.yaml` if present, then `~/.stellar-build/config.yaml` (global, installer-written), then built-in defaults (`{user_name}` from `git config user.name`, languages English, `{user_skill_level}` intermediate, `{output_folder}` = `{planning_artifacts}` or `{project-root}/docs`). Never block on missing config files. Resolve:
+Resolve config with a layered lookup: `{project-root}/.stellar-build/bmm/config.yaml` if present, then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then built-in defaults (`{user_name}` from `git config user.name`, languages English, `{user_skill_level}` intermediate, `{output_folder}` = `{planning_artifacts}` or `{project-root}/docs`). Never block on missing config files. Resolve:
 
 - `project_name`, `output_folder`, `user_name`
 - `communication_language`, `document_output_language`, `user_skill_level`

@@ -45,7 +45,7 @@ Treat every entry in `{workflow.persistent_facts}` as foundational context you c
 
 ### Step 4: Load Config
 
-Resolve config with a layered lookup: `{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`) if present, then `~/.stellar-build/config.yaml` (global, installer-written), then built-in defaults (`{user_name}` from `git config user.name`, languages English, `{user_skill_level}` intermediate, `{implementation_artifacts}` `{project-root}/docs/stories`). Never block on missing config files. Resolve:
+Resolve config with a layered lookup: `{project-root}/.stellar-build/bmm/config.yaml` (+ `config.user.yaml`) if present, then `~/.stellar-build/config.yaml` (global, installer-written; in sandboxed installs it lives under the install prefix), then built-in defaults (`{user_name}` from `git config user.name`, languages English, `{user_skill_level}` intermediate, `{implementation_artifacts}` `{project-root}/docs/stories`). Never block on missing config files. Resolve:
 
 - `project_name`, `user_name`
 - `communication_language`, `document_output_language`
