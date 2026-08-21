@@ -30,7 +30,9 @@ Party mode accepts optional arguments when invoked:
 
 4. **Load project context** — search for `**/project-context.md`. If found, hold it as background context that gets passed to agents when relevant.
 
-5. **Check for Raven** — note whether the `stellar-raven` MCP tools are available in this session. They are the personas' live source of Stellar truth outside party mode, and the spawn prompt below carries that instruction into each subagent. If they are not connected, mention it once when welcoming the user (`claude mcp add --transport http stellar-raven "https://raven.stellar.buzz/mcp"`) and carry on — agents will flag unverified Stellar claims instead.
+5. **Check for Raven** — note whether the `stellar-raven` MCP tools are available in this session. They are the personas' live source of Stellar truth outside party mode, and the spawn prompt below carries that instruction into each subagent. When they are connected, say nothing — the roster is what the user is waiting for. When they are not, mention it once while welcoming the user, with the line for the host they are on, then carry on — agents will flag unverified Stellar claims instead of stating them flatly:
+  - **Claude Code**: `claude mcp add --transport http stellar-raven "https://raven.stellar.buzz/mcp"`
+  - **Codex**: add an `[mcp_servers.stellar-raven]` block to `~/.codex/config.toml` bridging to the same URL through `mcp-remote`, then sign in with `stellar-loop raven login codex`
 
 6. **Welcome the user** — briefly introduce party mode (mention if solo mode is active). Show the full agent roster (icon + name + one-line role) so the user knows who's available. Ask what they'd like to discuss.
 
