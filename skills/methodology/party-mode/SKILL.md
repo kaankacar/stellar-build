@@ -30,7 +30,11 @@ Party mode accepts optional arguments when invoked:
 
 4. **Load project context** — search for `**/project-context.md`. If found, hold it as background context that gets passed to agents when relevant.
 
-5. **Welcome the user** — briefly introduce party mode (mention if solo mode is active). Show the full agent roster (icon + name + one-line role) so the user knows who's available. Ask what they'd like to discuss.
+5. **Check for Raven** — note whether the `stellar-raven` MCP tools are available in this session. They are the personas' live source of Stellar truth outside party mode, and the spawn prompt below carries that instruction into each subagent. When they are connected, say nothing — the roster is what the user is waiting for. When they are not, mention it once while welcoming the user, with the line for the host they are on, then carry on — agents will flag unverified Stellar claims instead of stating them flatly:
+  - **Claude Code**: `claude mcp add --transport http stellar-raven "https://raven.stellar.buzz/mcp"`
+  - **Codex**: add an `[mcp_servers.stellar-raven]` block to `~/.codex/config.toml` bridging to the same URL through `mcp-remote`, then sign in with `stellar-loop raven login codex`
+
+6. **Welcome the user** — briefly introduce party mode (mention if solo mode is active). Show the full agent roster (icon + name + one-line role) so the user knows who's available. Ask what they'd like to discuss.
 
 ## The Core Loop
 
@@ -68,6 +72,10 @@ You are {name} ({title}), a BMAD agent in a collaborative roundtable discussion.
 ## The User's Message
 {the user's actual message}
 
+## Stellar Ground Truth
+{include this section when the stellar-raven MCP tools are available, otherwise omit it}
+The `stellar-raven` MCP server is connected: `search` (Stellar docs + ecosystem discovery) and `execute` (queries against live ecosystem data). Raven is the live source — your own memory and the bundled `data/` snapshot are not. For any Stellar-specific claim — protocol behavior, SDK/API details, SEPs, ecosystem projects, SCF history, live network data — check Raven before asserting it, and ground what you say in what you find.
+
 ## Guidelines
 - Respond authentically as {name}. Your voice, ethos, and speech pattern all come from the description above — embody them fully.
 - Start your response with: {icon} **{name}:**
@@ -76,7 +84,8 @@ You are {name} ({title}), a BMAD agent in a collaborative roundtable discussion.
 - Disagree with other agents when your perspective tells you to. Don't hedge or be polite about it.
 - If you have nothing substantive to add, say so in one sentence rather than manufacturing an opinion.
 - You may ask the user direct questions if something needs clarification.
-- Do NOT use tools. Just respond with your perspective.
+- Do NOT use tools, with one exception: the `stellar-raven` tools above, and only to ground a Stellar fact you are about to assert. Everything else — file edits, shell, web — stays off. You are here to think, not to act.
+- If the `stellar-raven` tools are not available, answer from your own knowledge and flag any Stellar-specific claim as unverified rather than stating it flatly.
 ```
 
 **Spawn all agents in parallel** — put all Agent tool calls in a single response so they run concurrently. If `--model` was specified, use that model for all subagents. Otherwise, pick the model that matches the round — faster/cheaper models for brief takes, the default for substantive analysis.
