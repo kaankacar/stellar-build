@@ -83,6 +83,7 @@ stellar contract invoke \
 stellar contract invoke \
   --network mainnet \
   --id <CONTRACT_ID> \
+  --source <DEPLOYER_KEY> \
   -- <read_method>
 ```
 
