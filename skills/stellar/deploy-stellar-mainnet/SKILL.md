@@ -1,6 +1,6 @@
 ---
 name: deploy-stellar-mainnet
-description: Walk through the devnet → mainnet deployment checklist for a Soroban contract or Stellar dApp. Use when a user says "deploy to Stellar mainnet", "going live on Stellar", "deploy my Soroban contract", "Stellar production deployment", "mainnet checklist", or "ship it on Stellar". Covers pre-deployment verification, deployment mechanics with stellar CLI, and post-deployment monitoring with Soroban-specific gates.
+description: Walk through the testnet → mainnet deployment checklist for a Soroban contract or Stellar dApp. Use when a user says "deploy to Stellar mainnet", "going live on Stellar", "deploy my Soroban contract", "Stellar production deployment", "mainnet checklist", or "ship it on Stellar". Covers pre-deployment verification, deployment mechanics with stellar CLI, and post-deployment monitoring with Soroban-specific gates.
 ---
 
 ## What this skill does
@@ -42,29 +42,37 @@ Check `stellar` CLI is installed: `stellar --version` (install: `cargo install s
 
 ```bash
 # 1. Ensure mainnet network is configured
+# SDF doesn't run a public mainnet RPC. Pick a provider from
+# https://developers.stellar.org/docs/data/apis/rpc/providers
+# (sorobanrpc.com, below, is one of the free public ones)
 stellar network add mainnet \
   --rpc-url https://mainnet.sorobanrpc.com \
   --network-passphrase "Public Global Stellar Network ; September 2015"
 
 # 2. Build optimized WASM
 stellar contract build
-# Artifact lands at target/wasm32-unknown-unknown/release/<contract>.wasm
+# Artifact lands at target/wasm32v1-none/release/<contract>.wasm
+# (target/wasm32-unknown-unknown/... on older toolchains)
 
 # 3. Upload to mainnet
 stellar contract upload \
   --network mainnet \
   --source <DEPLOYER_KEY> \
-  --wasm target/wasm32-unknown-unknown/release/<contract>.wasm
+  --wasm target/wasm32v1-none/release/<contract>.wasm
 # Save the returned WASM hash
 
-# 4. Deploy (instantiate) from the uploaded hash
+# 4. Deploy (instantiate) from the uploaded hash.
+#    If the contract has a __constructor, pass its args after `--`;
+#    they run atomically with the deploy.
 stellar contract deploy \
   --network mainnet \
   --source <DEPLOYER_KEY> \
-  --wasm-hash <HASH>
+  --wasm-hash <HASH> \
+  -- --<arg-name> <value>
 # Save the returned contract ID
 
-# 5. Initialize if your contract has a constructor
+# 5. Only for contracts with a separate `initialize` function (no constructor).
+#    Anyone can call it between deploy and init, so prefer a constructor.
 stellar contract invoke \
   --network mainnet \
   --id <CONTRACT_ID> \
@@ -75,6 +83,7 @@ stellar contract invoke \
 stellar contract invoke \
   --network mainnet \
   --id <CONTRACT_ID> \
+  --source <DEPLOYER_KEY> \
   -- <read_method>
 ```
 
@@ -105,4 +114,4 @@ After successful deploy:
 - Do not let the user skip any Gate 1 checkbox. A broken mainnet contract is dramatically harder to fix than a delayed deploy
 - For first-time deployers, walk them through `stellar` CLI installation if `which stellar` returns nothing
 - For high-value contracts (anything holding user funds or being core infrastructure), refuse to proceed without at least informal peer-review evidence
-- Mainnet network passphrase is critical — never copy from testnet config. The mainnet passphrase contains "September 2015"; testnet contains "September 2015" too but with "Test" prefix — always verify
+- Mainnet network passphrase is critical — never copy from testnet config. Mainnet is exactly `Public Global Stellar Network ; September 2015`; testnet is `Test SDF Network ; September 2015`. Both end in "September 2015", so check the whole string (`stellar network info --network mainnet` prints the passphrase the RPC reports)
