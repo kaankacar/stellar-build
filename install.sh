@@ -189,6 +189,16 @@ EOF
       && rm -f "$PREFIX/.codex/config.toml.bak" \
       && ok "Disconnected Raven MCP from Codex" || true
   fi
+  # Disconnect the Stellar Docs MCP server if this install added it.
+  if grep -q '"docsMcpClaude":true' "$MANIFEST_FILE" 2>/dev/null && has_cmd claude; then
+    claude mcp remove --scope user stellar-docs >/dev/null 2>&1 \
+      && ok "Disconnected Stellar Docs MCP from Claude Code" || true
+  fi
+  if grep -q '"docsMcpCodex":true' "$MANIFEST_FILE" 2>/dev/null && [ -f "$PREFIX/.codex/config.toml" ]; then
+    sed -i.bak '/^\[mcp_servers\.stellar-docs\]$/,/^args = .*mcp-remote.*\]$/d' "$PREFIX/.codex/config.toml" 2>/dev/null \
+      && rm -f "$PREFIX/.codex/config.toml.bak" \
+      && ok "Disconnected Stellar Docs MCP from Codex" || true
+  fi
 
   # Never `rm -rf` the legacy ~/.stellar — the Stellar CLI may keep its own
   # config there. Remove only what we own; the dir goes away only if empty.
@@ -607,6 +617,37 @@ if $RAVEN_CODEX && [ ! -d "$PREFIX/.mcp-auth" ]; then
   warn "Codex needs its own Raven sign-in: stellar-loop raven login codex"
 fi
 
+# --- Stellar Docs MCP: official docs only, no sign-in ---
+# developers.stellar.org/mcp searches and reads the published Stellar docs.
+# It needs no OAuth, so it works right after install.
+DOCS_MCP_URL="https://developers.stellar.org/mcp"
+DOCS_MCP_CLAUDE=false
+DOCS_MCP_CODEX=false
+log "Connecting Stellar Docs MCP (developers.stellar.org/mcp)..."
+if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
+  if claude mcp get stellar-docs >/dev/null 2>&1; then
+    # Carry ownership forward across --update runs so uninstall still cleans up.
+    grep -q '"docsMcpClaude":true' "$MANIFEST_FILE" 2>/dev/null && DOCS_MCP_CLAUDE=true
+    ok "Stellar Docs MCP already connected in Claude Code"
+  elif claude mcp add --transport http --scope user stellar-docs "$DOCS_MCP_URL" >/dev/null 2>&1; then
+    DOCS_MCP_CLAUDE=true
+    ok "Stellar Docs MCP connected for Claude Code (no sign-in needed)"
+  else
+    warn "Could not add Stellar Docs MCP. Add it manually: claude mcp add --transport http --scope user stellar-docs $DOCS_MCP_URL"
+  fi
+fi
+if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
+  mkdir -p "$PREFIX/.codex"
+  if ! grep -q '\[mcp_servers\.stellar-docs\]' "$CODEX_CONFIG" 2>/dev/null; then
+    printf '\n[mcp_servers.stellar-docs]\ncommand = "npx"\nargs = ["-y", "mcp-remote", "%s"]\n' "$DOCS_MCP_URL" >> "$CODEX_CONFIG"
+    DOCS_MCP_CODEX=true
+    ok "Stellar Docs MCP wired for Codex (config.toml via mcp-remote)"
+  else
+    grep -q '"docsMcpCodex":true' "$MANIFEST_FILE" 2>/dev/null && DOCS_MCP_CODEX=true
+    ok "Stellar Docs MCP already wired for Codex"
+  fi
+fi
+
 # --- Manifest ---
 SKILL_PATHS_JSON=""
 for s in $FOLDER_SKILLS; do
@@ -623,7 +664,7 @@ if [ -n "$PERMS_ADDED" ]; then
 fi
 
 cat > "$MANIFEST_FILE" <<MANIFEST
-{"installedBy":"$PRODUCT_NAME","installedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","prefix":"$PREFIX","skillPaths":[$SKILL_PATHS_JSON],"sharedPaths":["$CLAUDE_SKILLS/data","$CLAUDE_SKILLS/SKILL_ROUTER.md","$CODEX_SKILLS/data","$CODEX_SKILLS/SKILL_ROUTER.md"],"permissionsAdded":[$PERMS_JSON],"traceHook":"$HOOK_CMD","hooksDir":"$HOOKS_DIR","codexHooks":"$CODEX_HOOKS","settingsFile":"$CLAUDE_SETTINGS","ravenClaude":$RAVEN_CLAUDE,"ravenCodex":$RAVEN_CODEX}
+{"installedBy":"$PRODUCT_NAME","installedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","prefix":"$PREFIX","skillPaths":[$SKILL_PATHS_JSON],"sharedPaths":["$CLAUDE_SKILLS/data","$CLAUDE_SKILLS/SKILL_ROUTER.md","$CODEX_SKILLS/data","$CODEX_SKILLS/SKILL_ROUTER.md"],"permissionsAdded":[$PERMS_JSON],"traceHook":"$HOOK_CMD","hooksDir":"$HOOKS_DIR","codexHooks":"$CODEX_HOOKS","settingsFile":"$CLAUDE_SETTINGS","ravenClaude":$RAVEN_CLAUDE,"ravenCodex":$RAVEN_CODEX,"docsMcpClaude":$DOCS_MCP_CLAUDE,"docsMcpCodex":$DOCS_MCP_CODEX}
 MANIFEST
 ok "Wrote manifest to $MANIFEST_FILE"
 
