@@ -83,7 +83,7 @@ state_field() {
   fi
 }
 
-# --- Raven MCP (raven.stellar.buzz) ---------------------------------------
+# --- Raven MCP (raven.stellar.org) ---------------------------------------
 # Raven is OAuth-gated (authorization_code + PKCE only — no service tokens), so
 # every machine needs a one-time browser sign-in. Registering the server is NOT
 # the same as being signed in, and the two runtimes keep separate token stores,
@@ -92,8 +92,8 @@ state_field() {
 #                "Connected" means the token actually works.
 #   Codex        reaches HTTP MCP through the `mcp-remote` bridge, which caches
 #                tokens under ~/.mcp-auth.
-RAVEN_URL="https://raven.stellar.buzz/mcp"
-RAVEN_HOST="raven.stellar.buzz"
+RAVEN_URL="https://raven.stellar.org/mcp"
+RAVEN_HOST="raven.stellar.org"
 MCP_AUTH_DIR="$HOME/.mcp-auth"
 
 # connected | needs-auth | not-configured | no-cli

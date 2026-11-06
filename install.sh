@@ -530,23 +530,40 @@ elif ! has_cmd node; then
 fi
 
 # --- Raven MCP: Stellar docs + live ecosystem data for every agent/persona ---
-# Raven (raven.stellar.buzz) is the official hosted MCP server for the Stellar
+# Raven (raven.stellar.org) is the official hosted MCP server for the Stellar
 # ecosystem — `search` over docs + ecosystem, `execute` against live data. The
 # personas lean on it for ground truth, so we wire it up at install time.
 # The playground on the site is a demo; agents connect to the MCP directly.
-RAVEN_URL="https://raven.stellar.buzz/mcp"
+RAVEN_URL="https://raven.stellar.org/mcp"
+# Older installs used this host. It now only redirects (308) to raven.stellar.org,
+# so --update moves those entries to RAVEN_URL. The user signs in again once.
+RAVEN_OLD_URL="https://raven.stellar.buzz/mcp"
 RAVEN_CLAUDE=false
 RAVEN_CODEX=false
-log "Connecting Raven MCP (raven.stellar.buzz)..."
+log "Connecting Raven MCP (raven.stellar.org)..."
 # Claude Code MCP config is global — only touch it for real (non --prefix) installs.
 if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
+  RAVEN_MOVED=false
+  if claude mcp get stellar-raven 2>/dev/null | grep -qF "$RAVEN_OLD_URL"; then
+    if claude mcp remove --scope user stellar-raven >/dev/null 2>&1; then
+      RAVEN_MOVED=true
+    else
+      warn "Raven uses the old URL. Run: claude mcp remove stellar-raven, then re-run this installer"
+    fi
+  fi
   if claude mcp get stellar-raven >/dev/null 2>&1; then
     # Carry ownership forward across --update runs so uninstall still cleans up.
     grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CLAUDE=true
     ok "Raven MCP already connected in Claude Code"
   elif claude mcp add --transport http --scope user stellar-raven "$RAVEN_URL" >/dev/null 2>&1; then
     RAVEN_CLAUDE=true
-    ok "Raven MCP connected for Claude Code (OAuth sign-in on first use)"
+    if $RAVEN_MOVED; then
+      # A moved entry keeps its owner, so uninstall removes it only if this installer added it.
+      grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null || RAVEN_CLAUDE=false
+      ok "Raven MCP moved to raven.stellar.org in Claude Code"
+    else
+      ok "Raven MCP connected for Claude Code (OAuth sign-in on first use)"
+    fi
   else
     warn "Could not add Raven MCP — add manually: claude mcp add --transport http stellar-raven $RAVEN_URL"
   fi
@@ -563,7 +580,13 @@ if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
     ok "Raven MCP wired for Codex (config.toml via mcp-remote)"
   else
     grep -q '"ravenCodex":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CODEX=true
-    ok "Raven MCP already wired for Codex"
+    if grep -qF "$RAVEN_OLD_URL" "$CODEX_CONFIG" 2>/dev/null; then
+      sed -i.bak "s#$RAVEN_OLD_URL#$RAVEN_URL#g" "$CODEX_CONFIG" && rm -f "$CODEX_CONFIG.bak"
+      ok "Raven MCP moved to raven.stellar.org for Codex"
+      warn "Codex needs a new Raven sign-in: stellar-loop raven login codex"
+    else
+      ok "Raven MCP already wired for Codex"
+    fi
   fi
 fi
 
