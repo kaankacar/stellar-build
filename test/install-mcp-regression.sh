@@ -366,6 +366,38 @@ else
 fi
 assert_file_has "mirror still on old URL after no-op" "$miss" 'https://raven.stellar.buzz/mcp'
 
+
+echo "== README / bri / stellar-loop Raven guidance =="
+if [ -f "$ROOT/README.md" ]; then
+  assert "README has --scope user for Raven" \
+    grep -q 'claude mcp add --transport http --scope user stellar-raven "https://raven.stellar.org/mcp"' \
+    "$ROOT/README.md"
+fi
+if [ -f "$ROOT/skills/methodology/bri-tech-writer/SKILL.md" ]; then
+  assert "bri skill mentions Codex config.toml" \
+    grep -q 'mcp_servers.stellar-raven' "$ROOT/skills/methodology/bri-tech-writer/SKILL.md"
+  assert "bri skill mentions stellar-loop raven login codex" \
+    grep -q 'stellar-loop raven login codex' "$ROOT/skills/methodology/bri-tech-writer/SKILL.md"
+fi
+if [ -f "$ROOT/skills/loop/bin/stellar-loop" ]; then
+  assert "stellar-loop defines raven_codex_authenticated" \
+    grep -q '^raven_codex_authenticated()' "$ROOT/skills/loop/bin/stellar-loop"
+  assert "login waits on raven_codex_authenticated" \
+    grep -q 'raven_codex_authenticated && break' "$ROOT/skills/loop/bin/stellar-loop"
+fi
+if grep -q 'codex_mcp_replace_url_in_table "$CODEX_CONFIG" stellar-raven' "$ROOT/install.sh"; then
+  if grep -A6 'codex_mcp_replace_url_in_table "$CODEX_CONFIG" stellar-raven' "$ROOT/install.sh" \
+      | grep -q 'ok "Raven MCP moved to raven.stellar.org for Codex"'; then
+    assert "install only ok's Codex move after successful replace" true
+  else
+    assert "install only ok's Codex move after successful replace" false
+  fi
+  assert "install warns when Codex migrate fails" \
+    grep -q 'Could not migrate Raven URL in Codex config.toml' "$ROOT/install.sh"
+  assert "install rolls back Claude entry on migrate failure" \
+    grep -q 'claude_user_mcp_set_entry stellar-raven "$RAVEN_BACKUP"' "$ROOT/install.sh"
+fi
+
 echo "== install.sh / stellar-loop syntax =="
 assert "bash -n install.sh" bash -n "$ROOT/install.sh"
 if [ -f "$ROOT/skills/loop/bin/stellar-loop" ]; then

@@ -813,25 +813,46 @@ elif ! has_cmd node; then
 fi
 
 # --- Raven MCP: Stellar docs + live ecosystem data for every agent/persona ---
-# Raven (raven.stellar.buzz) is the official hosted MCP server for the Stellar
+# Raven (raven.stellar.org) is the official hosted MCP server for the Stellar
 # ecosystem — `search` over docs + ecosystem, `execute` against live data. The
 # personas lean on it for ground truth, so we wire it up at install time.
 # The playground on the site is a demo; agents connect to the MCP directly.
-RAVEN_URL="https://raven.stellar.buzz/mcp"
+RAVEN_URL="https://raven.stellar.org/mcp"
+# Older installs used this host. It now only redirects (308) to raven.stellar.org,
+# so --update moves those entries to RAVEN_URL. The user signs in again once.
+RAVEN_OLD_URL="https://raven.stellar.buzz/mcp"
 RAVEN_CLAUDE=false
 RAVEN_CODEX=false
-log "Connecting Raven MCP (raven.stellar.buzz)..."
+log "Connecting Raven MCP (raven.stellar.org)..."
 # Claude Code MCP config is global — only touch it for real (non --prefix) installs.
+# Migrate only the user-scoped entry in ~/.claude.json so project/local servers
+# are not confused with user scope, and custom fields (e.g. alwaysLoad) survive.
 if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
-  if claude mcp get stellar-raven >/dev/null 2>&1; then
-    # Carry ownership forward across --update runs so uninstall still cleans up.
-    manifest_flag_true ravenClaude && RAVEN_CLAUDE=true
-    ok "Raven MCP already connected in Claude Code"
+  # Carry ownership forward across --update runs so uninstall still cleans up.
+  manifest_flag_true ravenClaude && RAVEN_CLAUDE=true
+  if claude_user_mcp_has stellar-raven; then
+    RAVEN_CUR_URL="$(claude_user_mcp_url stellar-raven 2>/dev/null || true)"
+    if [ "$RAVEN_CUR_URL" = "$RAVEN_OLD_URL" ]; then
+      RAVEN_BACKUP="$(claude_user_mcp_get_json stellar-raven 2>/dev/null || true)"
+      if [ -n "$RAVEN_BACKUP" ] && claude_user_mcp_set_url stellar-raven "$RAVEN_URL"; then
+        ok "Raven MCP moved to raven.stellar.org in Claude Code"
+      else
+        # Roll back any partial write so a failed migration keeps the prior registration.
+        [ -n "$RAVEN_BACKUP" ] && claude_user_mcp_set_entry stellar-raven "$RAVEN_BACKUP" 2>/dev/null || true
+        warn "Could not migrate Raven MCP URL — restore/update ~/.claude.json or re-add: claude mcp add --transport http --scope user stellar-raven $RAVEN_URL"
+      fi
+    else
+      ok "Raven MCP already connected in Claude Code"
+    fi
   elif claude mcp add --transport http --scope user stellar-raven "$RAVEN_URL" >/dev/null 2>&1; then
     RAVEN_CLAUDE=true
     ok "Raven MCP connected for Claude Code (OAuth sign-in on first use)"
   else
-    warn "Could not add Raven MCP — add manually: claude mcp add --transport http stellar-raven $RAVEN_URL"
+    if claude mcp get stellar-raven 2>/dev/null | grep -qF "$RAVEN_OLD_URL"; then
+      warn "Raven still uses the old host outside user scope. Add user scope: claude mcp add --transport http --scope user stellar-raven $RAVEN_URL"
+    else
+      warn "Could not add Raven MCP — add manually: claude mcp add --transport http --scope user stellar-raven $RAVEN_URL"
+    fi
   fi
 elif [ "$PREFIX" != "$HOME" ]; then
   warn "Sandbox install — skipping global Claude MCP registration"
@@ -846,7 +867,16 @@ if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
     ok "Raven MCP wired for Codex (config.toml via mcp-remote)"
   else
     manifest_flag_true ravenCodex && RAVEN_CODEX=true
-    ok "Raven MCP already wired for Codex"
+    if codex_mcp_table_has_url "$CODEX_CONFIG" stellar-raven "$RAVEN_OLD_URL"; then
+      if codex_mcp_replace_url_in_table "$CODEX_CONFIG" stellar-raven "$RAVEN_OLD_URL" "$RAVEN_URL"; then
+        ok "Raven MCP moved to raven.stellar.org for Codex"
+        warn "Codex needs a new Raven sign-in: stellar-loop raven login codex"
+      else
+        warn "Could not migrate Raven URL in Codex config.toml — update mcp_servers.stellar-raven to $RAVEN_URL manually"
+      fi
+    else
+      ok "Raven MCP already wired for Codex"
+    fi
   fi
 fi
 
