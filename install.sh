@@ -64,7 +64,7 @@ CLAUDE_SETTINGS="$PREFIX/.claude/settings.json"
 # owned by the Stellar CLI.
 OWNED_CONFIG_ITEMS="manifest.json traces backups bench hooks bin cache .active .prompts profile.md optimizations.jsonl state.json .codex_ingested config.yaml templates"
 
-# --- MCP config helpers (testable; keep in sync with test/mcp-config-helpers.sh) ---
+# --- MCP config helpers (testable via STELLAR_BUILD_LIB_ONLY=1) ---
 # Codex accepts either [mcp_servers.name] or [mcp_servers."name"] for the same table.
 codex_mcp_table_re() {  # $1 = server name
   printf '\\[mcp_servers\\.("%s"|%s)\\]' "$1" "$1"
@@ -75,17 +75,103 @@ codex_mcp_has_table() {  # $1 = config.toml, $2 = server name
   grep -Eq "$(codex_mcp_table_re "$2")" "$1"
 }
 
-# Delete one MCP server table through the next TOML table header (or EOF).
-# Does not depend on an args line shape, so malformed/multi-line tables stay bounded.
+# Shared awk: track """ / ''' multiline strings and [] nesting so a line that
+# merely begins with '[' inside a value is not treated as a new table header.
+codex_toml_awk_lib() {
+  cat <<'AWK'
+  function is_ident_char(c) {
+    return (c >= "A" && c <= "Z") || (c >= "a" && c <= "z") || (c >= "0" && c <= "9") || c == "_"
+  }
+  function peek_table_header(line,   s, body, h, c0) {
+    # Never treat content inside multiline strings as a header.
+    if (ml_kind != "") return 0
+    s = line
+    gsub(/^[ \t]+/, "", s)
+    if (s == "" || substr(s, 1, 1) == "#") return 0
+    # Drop a trailing comment (header lines are single statements).
+    h = index(s, "#")
+    if (h > 0) s = substr(s, 1, h - 1)
+    gsub(/[ \t]+$/, "", s)
+    if (length(s) < 3) return 0
+    # Array-of-tables: [[name]]
+    if (substr(s, 1, 2) == "[[" && substr(s, length(s) - 1, 2) == "]]") return 1
+    if (substr(s, 1, 1) != "[" || substr(s, length(s), 1) != "]") return 0
+    body = substr(s, 2, length(s) - 2)
+    gsub(/^[ \t]+|[ \t]+$/, "", body)
+    if (body == "" || index(body, ",") > 0) return 0
+    # Inside an open [array], a lone ["x"] line is a nested array value, not a
+    # table. Still accept identifier-like headers so an unclosed array cannot
+    # swallow the rest of the file past the next real [mcp_servers.*] table.
+    if (bracket_depth > 0) {
+      c0 = substr(body, 1, 1)
+      if (c0 == "\"" || c0 == "'") return 0
+      if (!is_ident_char(c0)) return 0
+    }
+    return 1
+  }
+  function scan_toml_line(line,   i, c, n) {
+    n = length(line); i = 1
+    while (i <= n) {
+      c = substr(line, i, 1)
+      if (ml_kind == "basic") {
+        if (c == "\\") { i += 2; continue }
+        if (substr(line, i, 3) == "\"\"\"") { ml_kind = ""; i += 3; continue }
+        i++; continue
+      }
+      if (ml_kind == "literal") {
+        if (substr(line, i, 3) == "'''") { ml_kind = ""; i += 3; continue }
+        i++; continue
+      }
+      if (substr(line, i, 3) == "\"\"\"") { ml_kind = "basic"; i += 3; continue }
+      if (substr(line, i, 3) == "'''") { ml_kind = "literal"; i += 3; continue }
+      if (c == "\"") {
+        i++
+        while (i <= n) {
+          c = substr(line, i, 1)
+          if (c == "\\") { i += 2; continue }
+          if (c == "\"") { i++; break }
+          i++
+        }
+        continue
+      }
+      if (c == "'") {
+        i++
+        while (i <= n) {
+          if (substr(line, i, 1) == "'") { i++; break }
+          i++
+        }
+        continue
+      }
+      if (c == "#") break
+      if (c == "[") bracket_depth++
+      else if (c == "]" && bracket_depth > 0) bracket_depth--
+      i++
+    }
+  }
+AWK
+}
+
+# Delete one MCP server table through the next real TOML table header (or EOF).
+# Does not depend on an args line shape; multiline strings/arrays stay bounded.
 codex_mcp_remove_table() {  # $1 = config.toml, $2 = server name
   local f="$1" name="$2" re tmp
   [ -f "$f" ] || return 0
   re="$(codex_mcp_table_re "$name")"
   tmp="$(mktemp)"
-  awk -v re="^${re}$" '
-    $0 ~ re { skip=1; next }
-    skip && /^\[/ { skip=0 }
-    !skip { print }
+  awk -v re="^${re}$" "$(codex_toml_awk_lib)"'
+    BEGIN { ml_kind = ""; bracket_depth = 0 }
+    $0 ~ re { scan_toml_line($0); skip = 1; next }
+    skip {
+      if (peek_table_header($0)) {
+        # Next real table ends the skip range. Reset nesting so an unclosed
+        # array/string inside the removed table cannot leak into what follows.
+        skip = 0; ml_kind = ""; bracket_depth = 0
+        scan_toml_line($0); print; next
+      }
+      scan_toml_line($0)
+      next
+    }
+    { scan_toml_line($0); print }
   ' "$f" > "$tmp" && mv "$tmp" "$f" || { rm -f "$tmp"; return 1; }
 }
 
@@ -95,11 +181,24 @@ codex_mcp_replace_url_in_table() {  # $1=file $2=server $3=old_url $4=new_url
   [ -f "$f" ] || return 1
   re="$(codex_mcp_table_re "$name")"
   tmp="$(mktemp)"
-  awk -v re="^${re}$" -v old="$old" -v new="$new" '
-    $0 ~ re { in_tbl=1; print; next }
-    in_tbl && /^\[/ { in_tbl=0 }
-    in_tbl { idx = index($0, old); if (idx) { $0 = substr($0, 1, idx-1) new substr($0, idx+length(old)); replaced=1 } }
-    { print }
+  awk -v re="^${re}$" -v old="$old" -v new="$new" "$(codex_toml_awk_lib)"'
+    BEGIN { ml_kind = ""; bracket_depth = 0 }
+    $0 ~ re { in_tbl = 1; scan_toml_line($0); print; next }
+    in_tbl {
+      if (peek_table_header($0)) {
+        in_tbl = 0; ml_kind = ""; bracket_depth = 0
+        scan_toml_line($0); print; next
+      }
+      idx = index($0, old)
+      if (idx) {
+        $0 = substr($0, 1, idx - 1) new substr($0, idx + length(old))
+        replaced = 1
+      }
+      scan_toml_line($0)
+      print
+      next
+    }
+    { scan_toml_line($0); print }
     END { exit replaced ? 0 : 1 }
   ' "$f" > "$tmp"
   local rc=$?
@@ -111,14 +210,21 @@ codex_mcp_replace_url_in_table() {  # $1=file $2=server $3=old_url $4=new_url
   return "$rc"
 }
 
+# True when the named MCP table currently contains url (quoted tables supported).
 codex_mcp_table_has_url() {  # $1=file $2=server $3=url
   local f="$1" name="$2" url="$3" re
   [ -f "$f" ] || return 1
   re="$(codex_mcp_table_re "$name")"
-  awk -v re="^${re}$" -v url="$url" '
-    $0 ~ re { in_tbl=1; next }
-    in_tbl && /^\[/ { in_tbl=0 }
-    in_tbl && index($0, url) { found=1; exit }
+  awk -v re="^${re}$" -v url="$url" "$(codex_toml_awk_lib)"'
+    BEGIN { ml_kind = ""; bracket_depth = 0 }
+    $0 ~ re { in_tbl = 1; scan_toml_line($0); next }
+    in_tbl {
+      if (peek_table_header($0)) exit
+      if (index($0, url)) { found = 1; exit }
+      scan_toml_line($0)
+      next
+    }
+    { scan_toml_line($0) }
     END { exit found ? 0 : 1 }
   ' "$f"
 }
@@ -220,11 +326,25 @@ claude_user_mcp_set_url() {  # $1 = name, $2 = url
 }
 
 # --- Manifest helpers ---
+# True when the current install manifest records ownership flag $1 as true.
+manifest_flag_true() {  # $1 = flag name (e.g. docsMcpClaude)
+  [ -f "$MANIFEST_FILE" ] || return 1
+  grep -q "\"$1\":true" "$MANIFEST_FILE" 2>/dev/null
+}
+
 read_manifest_array() {
   [ -f "$MANIFEST_FILE" ] || return 1
   sed -n "s/.*\"$1\":\[\([^]]*\)\].*/\1/p" "$MANIFEST_FILE" 2>/dev/null \
     | grep -o '"[^"]*"' | tr -d '"'
 }
+
+# Allow regression tests to source this file for the real helpers without installing.
+if [ "${STELLAR_BUILD_LIB_ONLY:-}" = 1 ]; then
+  if [ "${BASH_SOURCE[0]-}" != "$0" ]; then
+    return 0
+  fi
+  exit 0
+fi
 
 # Strip every learning-loop hook (trace / prompt-capture / session-start) that
 # points into a given hooks dir, from a Claude settings.json or Codex
@@ -335,21 +455,20 @@ EOF
   fi
 
   # Disconnect the Raven MCP server if this install added it.
-  if grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null && has_cmd claude; then
+  if manifest_flag_true ravenClaude && has_cmd claude; then
     claude mcp remove --scope user stellar-raven >/dev/null 2>&1 \
       && ok "Disconnected Raven MCP from Claude Code" || true
   fi
-  if grep -q '"ravenCodex":true' "$MANIFEST_FILE" 2>/dev/null && [ -f "$PREFIX/.codex/config.toml" ]; then
+  if manifest_flag_true ravenCodex && [ -f "$PREFIX/.codex/config.toml" ]; then
     codex_mcp_remove_table "$PREFIX/.codex/config.toml" stellar-raven \
       && ok "Disconnected Raven MCP from Codex" || true
   fi
-
   # Disconnect the Stellar Docs MCP server if this install added it.
-  if grep -q '"docsMcpClaude":true' "$MANIFEST_FILE" 2>/dev/null && has_cmd claude; then
+  if manifest_flag_true docsMcpClaude && has_cmd claude; then
     claude mcp remove --scope user stellar-docs >/dev/null 2>&1 \
       && ok "Disconnected Stellar Docs MCP from Claude Code" || true
   fi
-  if grep -q '"docsMcpCodex":true' "$MANIFEST_FILE" 2>/dev/null && [ -f "$PREFIX/.codex/config.toml" ]; then
+  if manifest_flag_true docsMcpCodex && [ -f "$PREFIX/.codex/config.toml" ]; then
     codex_mcp_remove_table "$PREFIX/.codex/config.toml" stellar-docs \
       && ok "Disconnected Stellar Docs MCP from Codex" || true
   fi
@@ -710,7 +829,7 @@ log "Connecting Raven MCP (raven.stellar.org)..."
 # are not confused with user scope, and custom fields (e.g. alwaysLoad) survive.
 if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
   # Carry ownership forward across --update runs so uninstall still cleans up.
-  grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CLAUDE=true
+  manifest_flag_true ravenClaude && RAVEN_CLAUDE=true
   if claude_user_mcp_has stellar-raven; then
     RAVEN_CUR_URL="$(claude_user_mcp_url stellar-raven 2>/dev/null || true)"
     if [ "$RAVEN_CUR_URL" = "$RAVEN_OLD_URL" ]; then
@@ -747,7 +866,7 @@ if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
     RAVEN_CODEX=true
     ok "Raven MCP wired for Codex (config.toml via mcp-remote)"
   else
-    grep -q '"ravenCodex":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CODEX=true
+    manifest_flag_true ravenCodex && RAVEN_CODEX=true
     if codex_mcp_table_has_url "$CODEX_CONFIG" stellar-raven "$RAVEN_OLD_URL"; then
       if codex_mcp_replace_url_in_table "$CODEX_CONFIG" stellar-raven "$RAVEN_OLD_URL" "$RAVEN_URL"; then
         ok "Raven MCP moved to raven.stellar.org for Codex"
@@ -808,14 +927,14 @@ DOCS_MCP_URL="https://developers.stellar.org/mcp"
 DOCS_MCP_CLAUDE=false
 DOCS_MCP_CODEX=false
 # Keep Claude ownership when the CLI is absent in this run (e.g. --update).
-grep -q '"docsMcpClaude":true' "$MANIFEST_FILE" 2>/dev/null && DOCS_MCP_CLAUDE=true
+manifest_flag_true docsMcpClaude && DOCS_MCP_CLAUDE=true
 log "Connecting Stellar Docs MCP (developers.stellar.org/mcp)..."
 if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
   # Only skip the user-scope add when a user-scoped entry already exists.
   # A project/local stellar-docs must not suppress cross-project registration.
   if claude_user_mcp_has stellar-docs; then
     # Carry ownership forward across --update runs so uninstall still cleans up.
-    grep -q '"docsMcpClaude":true' "$MANIFEST_FILE" 2>/dev/null && DOCS_MCP_CLAUDE=true
+    manifest_flag_true docsMcpClaude && DOCS_MCP_CLAUDE=true
     ok "Stellar Docs MCP already connected in Claude Code"
   elif claude mcp add --transport http --scope user stellar-docs "$DOCS_MCP_URL" >/dev/null 2>&1; then
     DOCS_MCP_CLAUDE=true
@@ -831,7 +950,7 @@ if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
     DOCS_MCP_CODEX=true
     ok "Stellar Docs MCP wired for Codex (config.toml via mcp-remote)"
   else
-    grep -q '"docsMcpCodex":true' "$MANIFEST_FILE" 2>/dev/null && DOCS_MCP_CODEX=true
+    manifest_flag_true docsMcpCodex && DOCS_MCP_CODEX=true
     ok "Stellar Docs MCP already wired for Codex"
   fi
 fi
