@@ -108,21 +108,27 @@ raven_claude_state() {
   esac
 }
 
-# mcp-remote keys its token cache by a hash of the server URL, so count the
-# cached token files rather than parsing a scheme we don't own.
+# mcp-remote keys its token cache by a hash of the server URL. Prefer a
+# host-attributed hit over token-file counts — a reused/refreshed token for the
+# new host may not increase the file count.
 mcp_auth_token_count() {
   [ -d "$MCP_AUTH_DIR" ] || { echo 0; return; }
   find "$MCP_AUTH_DIR" -name '*tokens*.json' 2>/dev/null | wc -l | tr -d ' '
 }
 
+raven_codex_authenticated() {
+  [ -d "$MCP_AUTH_DIR" ] || return 1
+  grep -rql "$RAVEN_HOST" "$MCP_AUTH_DIR" 2>/dev/null
+}
+
 # connected | needs-auth | unknown | not-configured
 raven_codex_state() {
-  grep -q '\[mcp_servers\.stellar-raven\]' "$HOME/.codex/config.toml" 2>/dev/null \
+  grep -Eq '\[mcp_servers\.("stellar-raven"|stellar-raven)\]' "$HOME/.codex/config.toml" 2>/dev/null \
     || { echo "not-configured"; return; }
   if [ ! -d "$MCP_AUTH_DIR" ]; then echo "needs-auth"; return; fi
   # Definitive when the cache names the host; otherwise a cache exists but we
   # can't attribute it to Raven — say so instead of guessing.
-  grep -rql "$RAVEN_HOST" "$MCP_AUTH_DIR" 2>/dev/null && { echo "connected"; return; }
+  raven_codex_authenticated && { echo "connected"; return; }
   [ "$(mcp_auth_token_count)" = "0" ] && { echo "needs-auth"; return; }
   echo "unknown"
 }
@@ -189,24 +195,27 @@ raven_login() {
 }
 
 # mcp-remote stays resident as a proxy after the OAuth dance, so run it in the
-# background, wait for a new token to land, then stop it.
+# background, wait until auth for RAVEN_HOST is visible, then stop it.
 raven_login_codex() {
   if ! command -v npx >/dev/null 2>&1; then
     printf "  %s!%s npx not found — Codex sign-in needs Node. Then: npx -y mcp-remote %s\n" "$C_Y" "$C_R" "$RAVEN_URL"
     return
   fi
+  if raven_codex_authenticated; then
+    printf "  %s✓%s Codex already signed in\n" "$C_G" "$C_R"
+    return
+  fi
   printf "  %s▸%s Signing in to Raven for Codex (mcp-remote)...\n" "$C_G" "$C_R"
-  local before; before="$(mcp_auth_token_count)"
   npx -y mcp-remote "$RAVEN_URL" >/dev/null 2>&1 &
   local pid=$! i=0
   while [ "$i" -lt 120 ]; do
+    raven_codex_authenticated && break
     kill -0 "$pid" 2>/dev/null || break
-    [ "$(mcp_auth_token_count)" -gt "$before" ] && break
     sleep 1; i=$((i + 1))
   done
   kill "$pid" 2>/dev/null || true
   wait "$pid" 2>/dev/null || true
-  if [ "$(mcp_auth_token_count)" -gt "$before" ]; then
+  if raven_codex_authenticated; then
     printf "  %s✓%s Codex signed in\n" "$C_G" "$C_R"
   else
     printf "  %s!%s Timed out — finish it manually: npx -y mcp-remote %s\n" "$C_Y" "$C_R" "$RAVEN_URL"

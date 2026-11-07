@@ -83,4 +83,6 @@ From here, Bri stays active — persona, persistent facts, `{agent.icon}` prefix
 For any Stellar-specific fact — protocol behavior, SDK/API details, SEPs, ecosystem projects, SCF history, live network data — prefer the **stellar-raven** MCP server over memory. It exposes two tools: `search` (Stellar docs + ecosystem discovery) and `execute` (queries against live ecosystem data). The bundled data layer under `data/` is a snapshot; Raven is the live source — use it to verify or refresh anything time-sensitive before building recommendations on it.
 
 - When the `stellar-raven` tools are available, use them before asserting Stellar facts, and ground your outputs in what you find.
-- If they are not available, suggest connecting them (once, briefly): `claude mcp add --transport http stellar-raven "https://raven.stellar.org/mcp"` — then continue with your best knowledge and flag unverified Stellar claims as such.
+- If they are not available, suggest connecting them (once, briefly) for the host you are on, then continue with your best knowledge and flag unverified Stellar claims as such:
+  - **Claude Code**: `claude mcp add --transport http --scope user stellar-raven "https://raven.stellar.org/mcp"`
+  - **Codex**: add an `[mcp_servers.stellar-raven]` block to `~/.codex/config.toml` bridging to the same URL through `mcp-remote`, then sign in with `stellar-loop raven login codex`

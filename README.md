@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/kaankacar/stellar-build/main/instal
 
 **Live ground truth — Raven MCP:**
 
-The installer connects [Raven](https://raven.stellar.org) — the official hosted MCP server for the Stellar ecosystem — to Claude Code (user scope) and Codex (via `mcp-remote`). Raven exposes `search` (Stellar docs + ecosystem discovery) and `execute` (queries against live ecosystem data), and every DevRel persona is instructed to reach for it before asserting Stellar facts. OAuth sign-in happens on first use. To wire it manually: `claude mcp add --transport http stellar-raven "https://raven.stellar.org/mcp"`. (The playground on the Raven site is a demo of what it can do — agents connect to the MCP directly.)
+The installer connects [Raven](https://raven.stellar.org) — the official hosted MCP server for the Stellar ecosystem — to Claude Code (user scope) and Codex (via `mcp-remote`). Raven exposes `search` (Stellar docs + ecosystem discovery) and `execute` (queries against live ecosystem data), and every DevRel persona is instructed to reach for it before asserting Stellar facts. OAuth sign-in happens on first use. To wire it manually: `claude mcp add --transport http --scope user stellar-raven "https://raven.stellar.org/mcp"`. (The playground on the Raven site is a demo of what it can do — agents connect to the MCP directly.)
 
 **Curated data layer:**
 

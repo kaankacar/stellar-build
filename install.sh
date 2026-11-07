@@ -64,6 +64,160 @@ CLAUDE_SETTINGS="$PREFIX/.claude/settings.json"
 # owned by the Stellar CLI.
 OWNED_CONFIG_ITEMS="manifest.json traces backups bench hooks bin cache .active .prompts profile.md optimizations.jsonl state.json .codex_ingested config.yaml templates"
 
+# --- MCP config helpers (testable; keep in sync with test/mcp-config-helpers.sh) ---
+# Codex accepts either [mcp_servers.name] or [mcp_servers."name"] for the same table.
+codex_mcp_table_re() {  # $1 = server name
+  printf '\\[mcp_servers\\.("%s"|%s)\\]' "$1" "$1"
+}
+
+codex_mcp_has_table() {  # $1 = config.toml, $2 = server name
+  [ -f "$1" ] || return 1
+  grep -Eq "$(codex_mcp_table_re "$2")" "$1"
+}
+
+# Delete one MCP server table through the next TOML table header (or EOF).
+codex_mcp_remove_table() {  # $1 = config.toml, $2 = server name
+  local f="$1" name="$2" re tmp
+  [ -f "$f" ] || return 0
+  re="$(codex_mcp_table_re "$name")"
+  tmp="$(mktemp)"
+  awk -v re="^${re}$" '
+    $0 ~ re { skip=1; next }
+    skip && /^\[/ { skip=0 }
+    !skip { print }
+  ' "$f" > "$tmp" && mv "$tmp" "$f" || { rm -f "$tmp"; return 1; }
+}
+
+# Replace old→new URL only inside the named MCP server table.
+codex_mcp_replace_url_in_table() {  # $1=file $2=server $3=old_url $4=new_url
+  local f="$1" name="$2" old="$3" new="$4" re tmp
+  [ -f "$f" ] || return 1
+  re="$(codex_mcp_table_re "$name")"
+  tmp="$(mktemp)"
+  awk -v re="^${re}$" -v old="$old" -v new="$new" '
+    $0 ~ re { in_tbl=1; print; next }
+    in_tbl && /^\[/ { in_tbl=0 }
+    in_tbl { idx = index($0, old); if (idx) { $0 = substr($0, 1, idx-1) new substr($0, idx+length(old)); replaced=1 } }
+    { print }
+    END { exit replaced ? 0 : 1 }
+  ' "$f" > "$tmp"
+  local rc=$?
+  if [ "$rc" -eq 0 ]; then
+    mv "$tmp" "$f"
+  else
+    rm -f "$tmp"
+  fi
+  return "$rc"
+}
+
+codex_mcp_table_has_url() {  # $1=file $2=server $3=url
+  local f="$1" name="$2" url="$3" re
+  [ -f "$f" ] || return 1
+  re="$(codex_mcp_table_re "$name")"
+  awk -v re="^${re}$" -v url="$url" '
+    $0 ~ re { in_tbl=1; next }
+    in_tbl && /^\[/ { in_tbl=0 }
+    in_tbl && index($0, url) { found=1; exit }
+    END { exit found ? 0 : 1 }
+  ' "$f"
+}
+
+# Claude Code user-scope MCP servers live in ~/.claude.json under top-level mcpServers.
+claude_json_path() {
+  if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+    printf '%s/.claude.json\n' "$CLAUDE_CONFIG_DIR"
+  else
+    printf '%s/.claude.json\n' "$HOME"
+  fi
+}
+
+claude_user_mcp_has() {  # $1 = server name
+  local f name="$1"
+  f="$(claude_json_path)"
+  [ -f "$f" ] || return 1
+  has_cmd node || return 1
+  node -e '
+    const fs = require("fs");
+    const [file, name] = process.argv.slice(1);
+    let c = {};
+    try { c = JSON.parse(fs.readFileSync(file, "utf8") || "{}"); } catch (e) { process.exit(1); }
+    process.exit(c.mcpServers && c.mcpServers[name] ? 0 : 1);
+  ' "$f" "$name"
+}
+
+claude_user_mcp_get_json() {  # $1 = server name → stdout JSON object
+  local f name="$1"
+  f="$(claude_json_path)"
+  [ -f "$f" ] || return 1
+  has_cmd node || return 1
+  node -e '
+    const fs = require("fs");
+    const [file, name] = process.argv.slice(1);
+    let c = {};
+    try { c = JSON.parse(fs.readFileSync(file, "utf8") || "{}"); } catch (e) { process.exit(1); }
+    if (!c.mcpServers || !c.mcpServers[name]) process.exit(1);
+    process.stdout.write(JSON.stringify(c.mcpServers[name]));
+  ' "$f" "$name"
+}
+
+claude_user_mcp_url() {  # $1 = server name → stdout url
+  local f name="$1"
+  f="$(claude_json_path)"
+  [ -f "$f" ] || return 1
+  has_cmd node || return 1
+  node -e '
+    const fs = require("fs");
+    const [file, name] = process.argv.slice(1);
+    let c = {};
+    try { c = JSON.parse(fs.readFileSync(file, "utf8") || "{}"); } catch (e) { process.exit(1); }
+    if (!c.mcpServers || !c.mcpServers[name]) process.exit(1);
+    process.stdout.write(c.mcpServers[name].url || "");
+  ' "$f" "$name"
+}
+
+claude_user_mcp_set_entry() {  # $1 = name, $2 = json object
+  local name="$1" json="$2" f
+  f="$(claude_json_path)"
+  has_cmd node || return 1
+  mkdir -p "$(dirname "$f")"
+  [ -f "$f" ] || printf '{}\n' > "$f"
+  node -e '
+    const fs = require("fs");
+    const [file, name, raw] = process.argv.slice(1);
+    let c = {};
+    try { c = JSON.parse(fs.readFileSync(file, "utf8") || "{}"); } catch (e) { c = {}; }
+    if (!c.mcpServers || typeof c.mcpServers !== "object") c.mcpServers = {};
+    c.mcpServers[name] = JSON.parse(raw);
+    const tmp = file + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(c, null, 2) + "\n");
+    fs.renameSync(tmp, file);
+  ' "$f" "$name" "$json"
+}
+
+# Update only the url field so custom keys (alwaysLoad, headers, timeout, …) survive.
+claude_user_mcp_set_url() {  # $1 = name, $2 = url
+  local name="$1" url="$2" f
+  f="$(claude_json_path)"
+  [ -f "$f" ] || return 1
+  has_cmd node || return 1
+  node -e '
+    const fs = require("fs");
+    const [file, name, url] = process.argv.slice(1);
+    let c = {};
+    try { c = JSON.parse(fs.readFileSync(file, "utf8") || "{}"); } catch (e) { process.exit(1); }
+    if (!c.mcpServers || !c.mcpServers[name]) process.exit(1);
+    c.mcpServers[name] = { ...c.mcpServers[name], url };
+    const tmp = file + ".tmp";
+    try {
+      fs.writeFileSync(tmp, JSON.stringify(c, null, 2) + "\n");
+      fs.renameSync(tmp, file);
+    } catch (e) {
+      try { fs.unlinkSync(tmp); } catch (_) {}
+      process.exit(1);
+    }
+  ' "$f" "$name" "$url"
+}
+
 # --- Manifest helpers ---
 read_manifest_array() {
   [ -f "$MANIFEST_FILE" ] || return 1
@@ -185,8 +339,7 @@ EOF
       && ok "Disconnected Raven MCP from Claude Code" || true
   fi
   if grep -q '"ravenCodex":true' "$MANIFEST_FILE" 2>/dev/null && [ -f "$PREFIX/.codex/config.toml" ]; then
-    sed -i.bak '/^\[mcp_servers\.stellar-raven\]$/,/^args = .*mcp-remote.*\]$/d' "$PREFIX/.codex/config.toml" 2>/dev/null \
-      && rm -f "$PREFIX/.codex/config.toml.bak" \
+    codex_mcp_remove_table "$PREFIX/.codex/config.toml" stellar-raven \
       && ok "Disconnected Raven MCP from Codex" || true
   fi
 
@@ -542,30 +695,34 @@ RAVEN_CLAUDE=false
 RAVEN_CODEX=false
 log "Connecting Raven MCP (raven.stellar.org)..."
 # Claude Code MCP config is global — only touch it for real (non --prefix) installs.
+# Migrate only the user-scoped entry in ~/.claude.json so project/local servers
+# are not confused with user scope, and custom fields (e.g. alwaysLoad) survive.
 if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
-  RAVEN_MOVED=false
-  if claude mcp get stellar-raven 2>/dev/null | grep -qF "$RAVEN_OLD_URL"; then
-    if claude mcp remove --scope user stellar-raven >/dev/null 2>&1; then
-      RAVEN_MOVED=true
+  # Carry ownership forward across --update runs so uninstall still cleans up.
+  grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CLAUDE=true
+  if claude_user_mcp_has stellar-raven; then
+    RAVEN_CUR_URL="$(claude_user_mcp_url stellar-raven 2>/dev/null || true)"
+    if [ "$RAVEN_CUR_URL" = "$RAVEN_OLD_URL" ]; then
+      RAVEN_BACKUP="$(claude_user_mcp_get_json stellar-raven 2>/dev/null || true)"
+      if [ -n "$RAVEN_BACKUP" ] && claude_user_mcp_set_url stellar-raven "$RAVEN_URL"; then
+        ok "Raven MCP moved to raven.stellar.org in Claude Code"
+      else
+        # Roll back any partial write so a failed migration keeps the prior registration.
+        [ -n "$RAVEN_BACKUP" ] && claude_user_mcp_set_entry stellar-raven "$RAVEN_BACKUP" 2>/dev/null || true
+        warn "Could not migrate Raven MCP URL — restore/update ~/.claude.json or re-add: claude mcp add --transport http --scope user stellar-raven $RAVEN_URL"
+      fi
     else
-      warn "Raven uses the old URL. Run: claude mcp remove stellar-raven, then re-run this installer"
+      ok "Raven MCP already connected in Claude Code"
     fi
-  fi
-  if claude mcp get stellar-raven >/dev/null 2>&1; then
-    # Carry ownership forward across --update runs so uninstall still cleans up.
-    grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CLAUDE=true
-    ok "Raven MCP already connected in Claude Code"
   elif claude mcp add --transport http --scope user stellar-raven "$RAVEN_URL" >/dev/null 2>&1; then
     RAVEN_CLAUDE=true
-    if $RAVEN_MOVED; then
-      # A moved entry keeps its owner, so uninstall removes it only if this installer added it.
-      grep -q '"ravenClaude":true' "$MANIFEST_FILE" 2>/dev/null || RAVEN_CLAUDE=false
-      ok "Raven MCP moved to raven.stellar.org in Claude Code"
-    else
-      ok "Raven MCP connected for Claude Code (OAuth sign-in on first use)"
-    fi
+    ok "Raven MCP connected for Claude Code (OAuth sign-in on first use)"
   else
-    warn "Could not add Raven MCP — add manually: claude mcp add --transport http stellar-raven $RAVEN_URL"
+    if claude mcp get stellar-raven 2>/dev/null | grep -qF "$RAVEN_OLD_URL"; then
+      warn "Raven still uses the old host outside user scope. Add user scope: claude mcp add --transport http --scope user stellar-raven $RAVEN_URL"
+    else
+      warn "Could not add Raven MCP — add manually: claude mcp add --transport http --scope user stellar-raven $RAVEN_URL"
+    fi
   fi
 elif [ "$PREFIX" != "$HOME" ]; then
   warn "Sandbox install — skipping global Claude MCP registration"
@@ -574,16 +731,19 @@ fi
 CODEX_CONFIG="$PREFIX/.codex/config.toml"
 if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
   mkdir -p "$PREFIX/.codex"
-  if ! grep -q '\[mcp_servers\.stellar-raven\]' "$CODEX_CONFIG" 2>/dev/null; then
+  if ! codex_mcp_has_table "$CODEX_CONFIG" stellar-raven; then
     printf '\n[mcp_servers.stellar-raven]\ncommand = "npx"\nargs = ["-y", "mcp-remote", "%s"]\n' "$RAVEN_URL" >> "$CODEX_CONFIG"
     RAVEN_CODEX=true
     ok "Raven MCP wired for Codex (config.toml via mcp-remote)"
   else
     grep -q '"ravenCodex":true' "$MANIFEST_FILE" 2>/dev/null && RAVEN_CODEX=true
-    if grep -qF "$RAVEN_OLD_URL" "$CODEX_CONFIG" 2>/dev/null; then
-      sed -i.bak "s#$RAVEN_OLD_URL#$RAVEN_URL#g" "$CODEX_CONFIG" && rm -f "$CODEX_CONFIG.bak"
-      ok "Raven MCP moved to raven.stellar.org for Codex"
-      warn "Codex needs a new Raven sign-in: stellar-loop raven login codex"
+    if codex_mcp_table_has_url "$CODEX_CONFIG" stellar-raven "$RAVEN_OLD_URL"; then
+      if codex_mcp_replace_url_in_table "$CODEX_CONFIG" stellar-raven "$RAVEN_OLD_URL" "$RAVEN_URL"; then
+        ok "Raven MCP moved to raven.stellar.org for Codex"
+        warn "Codex needs a new Raven sign-in: stellar-loop raven login codex"
+      else
+        warn "Could not migrate Raven URL in Codex config.toml — update mcp_servers.stellar-raven to $RAVEN_URL manually"
+      fi
     else
       ok "Raven MCP already wired for Codex"
     fi
