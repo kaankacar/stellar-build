@@ -64,6 +64,76 @@ CLAUDE_SETTINGS="$PREFIX/.claude/settings.json"
 # owned by the Stellar CLI.
 OWNED_CONFIG_ITEMS="manifest.json traces backups bench hooks bin cache .active .prompts profile.md optimizations.jsonl state.json .codex_ingested config.yaml templates"
 
+# --- MCP config helpers (testable; keep in sync with test/mcp-config-helpers.sh) ---
+# Codex accepts either [mcp_servers.name] or [mcp_servers."name"] for the same table.
+codex_mcp_table_re() {  # $1 = server name
+  printf '\\[mcp_servers\\.("%s"|%s)\\]' "$1" "$1"
+}
+
+codex_mcp_has_table() {  # $1 = config.toml, $2 = server name
+  [ -f "$1" ] || return 1
+  grep -Eq "$(codex_mcp_table_re "$2")" "$1"
+}
+
+# Delete one MCP server table through the next TOML table header (or EOF).
+# Does not depend on an args line shape, so malformed/multi-line tables stay bounded.
+codex_mcp_remove_table() {  # $1 = config.toml, $2 = server name
+  local f="$1" name="$2" re tmp
+  [ -f "$f" ] || return 0
+  re="$(codex_mcp_table_re "$name")"
+  tmp="$(mktemp)"
+  awk -v re="^${re}$" '
+    $0 ~ re { skip=1; next }
+    skip && /^\[/ { skip=0 }
+    !skip { print }
+  ' "$f" > "$tmp" && mv "$tmp" "$f" || { rm -f "$tmp"; return 1; }
+}
+
+# Replace old→new URL only inside the named MCP server table.
+codex_mcp_replace_url_in_table() {  # $1=file $2=server $3=old_url $4=new_url
+  local f="$1" name="$2" old="$3" new="$4" re tmp
+  [ -f "$f" ] || return 1
+  re="$(codex_mcp_table_re "$name")"
+  tmp="$(mktemp)"
+  awk -v re="^${re}$" -v old="$old" -v new="$new" '
+    $0 ~ re { in_tbl=1; print; next }
+    in_tbl && /^\[/ { in_tbl=0 }
+    in_tbl { idx = index($0, old); if (idx) { $0 = substr($0, 1, idx-1) new substr($0, idx+length(old)); replaced=1 } }
+    { print }
+    END { exit replaced ? 0 : 1 }
+  ' "$f" > "$tmp"
+  local rc=$?
+  if [ "$rc" -eq 0 ]; then
+    mv "$tmp" "$f"
+  else
+    rm -f "$tmp"
+  fi
+  return "$rc"
+}
+
+# Claude Code user-scope MCP servers live in ~/.claude.json under top-level mcpServers.
+claude_json_path() {
+  if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+    printf '%s/.claude.json\n' "$CLAUDE_CONFIG_DIR"
+  else
+    printf '%s/.claude.json\n' "$HOME"
+  fi
+}
+
+claude_user_mcp_has() {  # $1 = server name
+  local f name="$1"
+  f="$(claude_json_path)"
+  [ -f "$f" ] || return 1
+  has_cmd node || return 1
+  node -e '
+    const fs = require("fs");
+    const [file, name] = process.argv.slice(1);
+    let c = {};
+    try { c = JSON.parse(fs.readFileSync(file, "utf8") || "{}"); } catch (e) { process.exit(1); }
+    process.exit(c.mcpServers && c.mcpServers[name] ? 0 : 1);
+  ' "$f" "$name"
+}
+
 # --- Manifest helpers ---
 read_manifest_array() {
   [ -f "$MANIFEST_FILE" ] || return 1
@@ -185,8 +255,7 @@ EOF
       && ok "Disconnected Raven MCP from Claude Code" || true
   fi
   if grep -q '"ravenCodex":true' "$MANIFEST_FILE" 2>/dev/null && [ -f "$PREFIX/.codex/config.toml" ]; then
-    sed -i.bak '/^\[mcp_servers\.stellar-raven\]$/,/^args = .*mcp-remote.*\]$/d' "$PREFIX/.codex/config.toml" 2>/dev/null \
-      && rm -f "$PREFIX/.codex/config.toml.bak" \
+    codex_mcp_remove_table "$PREFIX/.codex/config.toml" stellar-raven \
       && ok "Disconnected Raven MCP from Codex" || true
   fi
   # Disconnect the Stellar Docs MCP server if this install added it.
@@ -195,8 +264,7 @@ EOF
       && ok "Disconnected Stellar Docs MCP from Claude Code" || true
   fi
   if grep -q '"docsMcpCodex":true' "$MANIFEST_FILE" 2>/dev/null && [ -f "$PREFIX/.codex/config.toml" ]; then
-    sed -i.bak '/^\[mcp_servers\.stellar-docs\]$/,/^args = .*mcp-remote.*\]$/d' "$PREFIX/.codex/config.toml" 2>/dev/null \
-      && rm -f "$PREFIX/.codex/config.toml.bak" \
+    codex_mcp_remove_table "$PREFIX/.codex/config.toml" stellar-docs \
       && ok "Disconnected Stellar Docs MCP from Codex" || true
   fi
 
@@ -567,7 +635,7 @@ fi
 CODEX_CONFIG="$PREFIX/.codex/config.toml"
 if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
   mkdir -p "$PREFIX/.codex"
-  if ! grep -q '\[mcp_servers\.stellar-raven\]' "$CODEX_CONFIG" 2>/dev/null; then
+  if ! codex_mcp_has_table "$CODEX_CONFIG" stellar-raven; then
     printf '\n[mcp_servers.stellar-raven]\ncommand = "npx"\nargs = ["-y", "mcp-remote", "%s"]\n' "$RAVEN_URL" >> "$CODEX_CONFIG"
     RAVEN_CODEX=true
     ok "Raven MCP wired for Codex (config.toml via mcp-remote)"
@@ -623,9 +691,13 @@ fi
 DOCS_MCP_URL="https://developers.stellar.org/mcp"
 DOCS_MCP_CLAUDE=false
 DOCS_MCP_CODEX=false
+# Keep Claude ownership when the CLI is absent in this run (e.g. --update).
+grep -q '"docsMcpClaude":true' "$MANIFEST_FILE" 2>/dev/null && DOCS_MCP_CLAUDE=true
 log "Connecting Stellar Docs MCP (developers.stellar.org/mcp)..."
 if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
-  if claude mcp get stellar-docs >/dev/null 2>&1; then
+  # Only skip the user-scope add when a user-scoped entry already exists.
+  # A project/local stellar-docs must not suppress cross-project registration.
+  if claude_user_mcp_has stellar-docs; then
     # Carry ownership forward across --update runs so uninstall still cleans up.
     grep -q '"docsMcpClaude":true' "$MANIFEST_FILE" 2>/dev/null && DOCS_MCP_CLAUDE=true
     ok "Stellar Docs MCP already connected in Claude Code"
@@ -638,7 +710,7 @@ if [ "$PREFIX" = "$HOME" ] && has_cmd claude; then
 fi
 if [ -d "$PREFIX/.codex" ] || [ "$PREFIX" != "$HOME" ]; then
   mkdir -p "$PREFIX/.codex"
-  if ! grep -q '\[mcp_servers\.stellar-docs\]' "$CODEX_CONFIG" 2>/dev/null; then
+  if ! codex_mcp_has_table "$CODEX_CONFIG" stellar-docs; then
     printf '\n[mcp_servers.stellar-docs]\ncommand = "npx"\nargs = ["-y", "mcp-remote", "%s"]\n' "$DOCS_MCP_URL" >> "$CODEX_CONFIG"
     DOCS_MCP_CODEX=true
     ok "Stellar Docs MCP wired for Codex (config.toml via mcp-remote)"
